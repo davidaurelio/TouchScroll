@@ -1,0 +1,199 @@
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+body {
+	font: 100%/1.5 Helvetica, Arial, sans-serif;
+	color: #444;
+	background: white;
+}
+
+#chrome {
+	height: 100%;
+}
+
+#demo {
+	height: 100%;
+	background: #fff;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-box-pack: justify;
+}
+
+@media only screen and (min-width: 440px) {
+	#chrome {
+		height: 611px;
+		padding: 159px 0 0 47px;
+		background: url(../img/iphone.png) no-repeat;
+	}
+
+	#demo {
+		width: 320px;
+		height: 460px;
+		-webkit-border-bottom-left-radius: 2px;
+		-webkit-border-bottom-right-radius: 2px;
+		overflow: hidden;
+	}
+}
+
+@media only screen and (min-width: 880px) {
+	#chrome {
+		height: 1136px;
+		padding: 71px 0 0 56px;
+		background: url(../img/ipad.png) no-repeat;
+	}
+
+	#demo {
+		width: 768px;
+		height: 1004px;
+	}
+}
+
+/* probably iphone portrait */
+@media screen and (width: 480px) and (max-height: 300px) {
+    #chrome {
+        background: none;
+        height: 100%;
+        padding: 0;
+    }
+
+    #demo {
+        height: 100%;
+        width: 100%;
+        -webkit-border-radius: 0;
+    }
+}
+
+/* probably ipad portrait */
+@media screen and (width: 768px) and (max-height: 1004px) {
+    #chrome {
+        background: none;
+        height: 100%;
+        padding: 0;
+    }
+
+    #demo {
+        height: 100%;
+        width: 100%;
+        -webkit-border-radius: 0;
+    }
+}
+
+/* probably ipad landscape */
+@media only screen and (width: 1024px) and (max-height: 748px) {
+    #chrome {
+        background: none;
+        height: 100%;
+        padding: 0;
+    }
+
+    #demo {
+        height: 100%;
+        width: 100%;
+        -webkit-border-radius: 0;
+    }
+}
+
+.toolbar {
+	border-bottom: 1px solid #2d3642;
+	border-top: 1px solid #cdd5df;
+	padding: 8px 4px;
+	height: 28px;
+	background: -webkit-gradient(linear, 0 0, 0 100%, from(#b0bccd), color-stop(.5,#889bb3), color-stop(.5,#8195af), to(#6d84a2));
+	overflow: hidden;
+	display: webkit-box;
+}
+
+h1 {
+	line-height: 26px;
+	font-size: 1.25em;
+	font-weight: bold;
+	text-shadow: rgba(0, 0, 0, 0.4) 0px -1px 0;
+	white-space: nowrap;
+	color: #fff;
+	text-align: center;
+	margin: 0 4px;
+	overflow: hidden;
+}
+
+.tabs {
+	border-top: 1px solid #333;
+	background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#555), to(#000000), color-stop(.5,#333),color-stop(.5,#262626));
+	display: -webkit-box;
+	text-align: center;
+}
+
+
+.tabs > * {
+	font-size: .8em;
+	height: 1.2em;
+	padding: 35px 0 .5em 0;
+	color: #808184;
+	text-decoration: none;
+	margin: .3em;
+	display: block;
+	width: 1px;
+	-webkit-box-flex: 1;
+	max-width: 25% !important;
+}
+
+.tabs > .current {
+	-webkit-border-radius: .4em;
+	background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#777), to(#222), color-stop(.5,#444),color-stop(.5,#363636));
+	color: #ccc;
+}
+
+.tabs > *:before {
+	background: none center no-repeat;
+	content: "";
+	display: block;
+	font: bold 32px/35px inherit;
+	height: 35px;
+	margin-top: -35px;
+	text-align: center;
+	text-shadow: rgba(255,255,255,0.3) 1px 1px 0px;
+}
+
+.tabs > [href="#about"]:before {
+	content: "Ts";
+	letter-spacing: -3px;
+	text-indent: -5px;
+}
+
+.tabs > [href="#horiz"]:before {
+	content: "\2194";
+}
+
+.tabs > [href="#twodim"]:before {
+	content: "\2194\2195";
+	letter-spacing: -24px;
+	text-indent: -32px;
+}
+
+.scroller {
+	-webkit-box-flex: 1;
+	display: none;
+	overflow: hidden;
+	padding: 1em;
+}
+
+.touchScroll {
+	padding: 0;
+}
+
+.touchScrollInner {
+	padding: 0.5em;
+}
+
+h2 {
+	color: #405070;
+	font-size: 1.125em;
+	text-align: center;
+	text-shadow: rgba(0,0,0,0.2) 1px 1px 0;
+}
+
+h2, p {
+	margin-bottom: .75em;
+}

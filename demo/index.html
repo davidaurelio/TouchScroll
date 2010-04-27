@@ -1,0 +1,128 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>TouchScroll Demo</title>
+	<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<link href="css/demo.css" rel="stylesheet">
+	<link href="../src/touchscroll.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="chrome">
+	<div id="demo">
+		<div class="toolbar"><h1>TouchScroll Demo</h1></div>
+
+		<div class="scroller" id="about">
+
+<h2>TouchScroll</h2>
+
+<p>TouchScroll is a JavaScript- and CSS 3-based scroller for devices using Webkit Touch (yes, that includes Android). It is meant to mimic “native” scrolling feeling and behavior as much as possible.</p>
+
+<p><strong>This demo works best on iPhone, iPad and in WebKit Nightly.</strong> Safari 4 kind of works, too.</p>
+
+<h2>A JavaScript-based scroller?</h2>
+
+<p>While Safari Mobile features native scrolling, there are two reasons to re-implement scrolling with JavaScript: The original scrolling behavior is rather slow – we were looking for a solution that feels more fluid. And the viewport behavior of Mobile Safari and other mobile browsers using WebKit doesn’t allow for fixed positioned elements.</p>
+
+<h2>How is it done?</h2>
+
+<p>TouchScroll uses a combination of JavaScript and CSS 3. All animations are done with CSS transitions – no JavaScript intervals. That means, the deceleration animation can be configured with a <a href="http://www.w3.org/TR/css3-transitions/#transition-timing-function_tag">bezier curve</a>.</p>
+
+<p>The elasticity effect when crossing the scroller bounds is achieved by dividing the bezier curve into two sub-curves using my (yet to be finished) <a href="http://github.com/davidaurelio/css-beziers">CSS Bezier library for JavaScript</a>.</p>
+
+<p>On Safari mobile TouchScroll benefits from hardware acceleration for CSS transforms and transitions, which allows for very smooth scrolling. Android hasn’t any hardware support, which makes the animations choppier than on Apples devices.</p>
+
+<h2>Updating the scroller</h2>
+
+<p>The scroller updates its dimensions and position automatically on window resizes (<code>window.onresize</code>), orientation changes (<code>window.onorientationchange</code>) and DOM modifications inside the scroller (<code>DOMSubtreeModified</code> event). It only needs to be updated manually when it wasn’t visible on initialization (or last update) as soon it is made visible again.</p>
+
+<h2>Customization</h2>
+
+<p>TouchScroll allows you to customize many aspects of the scrolling behavior. The following aspects are configurable:</p>
+
+<ul>
+<li>minimum scrolling offset – to prevent unintended scrolling, a minumum offset can be defined. It defaults to 5 pixels.</li>
+<li>Flicking behavior: maximum duration between the last move event and the release event that triggers flicking. The default is 150&thinsp;ms.</li>
+<li>Average friction and bezier curve for the flicking animation (CSS transition)</li>
+<li>Elasticity at the borders, and the maximum bounce length when flicking.</li>
+<li>The snapback duration and its timing function.</li>
+</ul>
+
+<h2>Get it!</h2>
+
+<p>TouchScroll is released under a BSD license. You can find more information on how to get TouchScroll <a href="http://uxebu.com/blog/2010/04/27/touchscroll-a-scrolling-layer-for-webkit-mobile">on our blog</a>.</p>
+
+<h2>More info</h2>
+
+<p>For more information <a href="mailto:da%20[AT]%20uxebu.com">contact me</a> via mail, follow me <a href="http://twitter.com/void_0">on twitter (@void_0)</a> and watch out for the TouchScroll blog post on <a href="http://uxebu.com/blog">our blog</a>.</p>
+
+		</div>
+		<div class="scroller" id="horiz">
+			<h2>Yet to be done</h2>
+		</div>
+		<div class="scroller" id="twodim">
+			<h2>Yet to be done</h2>
+		</div>
+
+		<div class="tabs">
+			<a href="#about" class="current">About</a>
+			<a href="#horiz">Horizontal</a>
+			<a href="#twodim">2-Dimensional</a>
+		</div>
+	</div>
+</div>
+
+<script src="../dist/touchscroll.min.js"></script>
+<script>
+(function(){
+	scrollers = {};
+
+	function showScreen(screenId){
+		try{
+			var activeScreen = document.querySelector("#demo .scroller#" + screenId);
+		}catch(e){
+			return;
+		}
+
+		if(!activeScreen){ return; }
+
+		Array.prototype.forEach.call(document.querySelectorAll("#demo .scroller"), function(screen){
+			screen.style.display = "none";
+		});
+		activeScreen.style.display = "block";
+
+		scrollers[screenId].setupScroller(true);
+	}
+
+	Array.prototype.forEach.call(document.querySelectorAll("#demo .scroller"), function(scroller){
+		scrollers[scroller.id] = new TouchScroll(scroller, {elastic: true});
+	});
+
+	document.querySelector("#demo .tabs").addEventListener("click", function(event){
+		var screenId = event.target.getAttribute("href");
+		if(screenId){
+			showScreen(screenId.slice(1));
+
+			Array.prototype.forEach.call(this.children, function(tab){
+				tab.className = "";
+			});
+			event.target.className = "current";
+		}
+	}, false);
+
+	var hash = location.hash.slice(1);
+	showScreen(hash || "about");
+	tab = document.querySelector('#demo .tabs [href="' +  location.hash + '"]');
+	if(tab){
+		Array.prototype.forEach.call(tab.parentNode.children, function(tab){
+			tab.className = "";
+		});
+		tab.className = "current";
+	}
+}())
+</script>
+
+</body>
+</html>
