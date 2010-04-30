@@ -76,7 +76,7 @@ var TouchScroll = (function(){
 			timingFunc: [0.4, 0, 1, 1],
 
 			// default snap back time
-			defaultTime: 250,
+			defaultTime: 400,
 
 			// whether the snap back effect always uses the default time or
 			// uses the bounce out time.
