@@ -359,6 +359,8 @@ TouchScroll.prototype = {
 		setTransitionProperty(outerScroller);
 		setTransitionProperty(innerScroller);
 
+		innerScroller.style.display = "inline-block";
+
 		// add scrollbars
 		var scrollbarsNode = scrollbarsTemplate.cloneNode(true),
 			trackE = scrollbarsNode.querySelector(".touchScrollTrackX"),
@@ -422,8 +424,8 @@ TouchScroll.prototype = {
 			},
 			scrollbars = this._scrollbars,
 			scrollMin = {
-				e: containerSize.e - scrollerSize.e,
-				f: containerSize.f - scrollerSize.f
+				e: Math.min(containerSize.e - scrollerSize.e, 0),
+				f: Math.min(containerSize.f - scrollerSize.f, 0)
 			};
 
 		scrollbars.container.style.height = containerSize.f + "px";
