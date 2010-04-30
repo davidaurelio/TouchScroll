@@ -360,6 +360,8 @@ TouchScroll.prototype = {
 		setTransitionProperty(innerScroller);
 
 		innerScroller.style.display = "inline-block";
+		innerScroller.style.minWidth = "100%";
+		innerScroller.style.webkitBoxSizing = "border-box";
 
 		// add scrollbars
 		var scrollbarsNode = scrollbarsTemplate.cloneNode(true),
