@@ -167,9 +167,7 @@ h1 {
 }
 
 .tabs > [href="#twodim"]:before {
-	content: "\2194\2195";
-	letter-spacing: -24px;
-	text-indent: -32px;
+	content: "\21B3";
 }
 
 .scroller {
