@@ -197,3 +197,38 @@ h2 {
 h2, p {
 	margin-bottom: .75em;
 }
+
+#horiz {
+	background: black;
+}
+
+#horiz .touchScrollHandle {
+	background-color: rgba(255, 255, 255, 0.5);
+	border: none;
+	min-height: 6px;
+	min-width: 6px;
+}
+
+.figure {
+	position: relative;
+}
+
+.figure > .legend {
+	background: rgba(255, 255, 255, 0.4);
+	bottom: 0;
+	color: #000;
+	font-size: 0.75em;
+	margin: 0;
+	padding: 8px;
+	position: absolute;
+	text-shadow: #fff 0 0 2px;
+}
+
+.figure > img {
+	display: block;
+}
+
+.legend a {
+	color: #1F1A6B;
+	text-decoration: none;
+}
