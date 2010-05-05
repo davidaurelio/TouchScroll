@@ -19,6 +19,10 @@ Usage
 
 To use TouchScroll you need an element with fixed height. Have a look at the demo for an elegant solution using `display: -webkit-box`.
 
+The stylesheet is mandatory at the moment. It will be made optional in the future for cases when scrollbars aren’t needed.
+
+    <link rel="stylesheet" src="touchscroll.css">
+    <!-- … -->
     <div id="scroller">
         <!-- contents go here -->
     </div>
@@ -36,7 +40,7 @@ To enable the elasticity/bouncing effect, add `{elastic: true}` as second parame
 
 Set the scroller to `overflow: auto` to enable scrolling in other environments.
 
-The scroller automatically adapts it’s size to content changes and window resizes/orientation changes.
+The scroller automatically adapts its size to content changes and window resizes/orientation changes.
 
 
 
