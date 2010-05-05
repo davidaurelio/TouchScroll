@@ -651,10 +651,33 @@ TouchScroll.prototype = {
 	},
 
 	scrollBy: function scrollBy(/*Number*/x, /*Number*/y){
+		this._stopAnimations();
+
 		var matrix = new WebKitCSSMatrix();
 		matrix.e = -x;
 		matrix.f = -y;
-		this._scrollBy(matrix);
+		return this._scrollBy(matrix);
+	},
+
+	scrollTo: function scrollTo(x, y){
+		this._stopAnimations();
+
+		var scrollMin = this._scrollMin;
+		var m = new WebKitCSSMatrix();
+		m.e = Math.min(0, Math.max(scrollMin.e, -x));
+		m.f = Math.min(0, Math.max(scrollMin.f, -y));
+
+		var currentOffset = this._currentOffset;
+		m.e -= currentOffset.e;
+		m.f -= currentOffset.f;
+
+		return this._scrollBy(m);
+	},
+
+	center: function center(){
+		var x = -Math.round(this._scrollMin.e/2);
+		var y = -Math.round(this._scrollMin.f/2);
+		return this.scrollTo(x, y);
 	},
 
 	// Scrolls the layer by applying a transform matrix to it.
@@ -862,7 +885,7 @@ TouchScroll.prototype = {
 		// offset (rounding its values) and then setting those values
 		// to the scroller by calling "scrollBy"
 		this._determineOffset(true);
-		this.scrollBy(0, 0);
+		this._scrollBy(new WebKitCSSMatrix());
 
 		// deleting queued bounces
 		this._bounces.e = this._bounces.f = null;
