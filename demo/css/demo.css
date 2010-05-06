@@ -170,6 +170,10 @@ h1 {
 	content: "\21B3";
 }
 
+.tabs > [href="#config"]:before {
+	content: "\2699";
+}
+
 .scroller {
 	-webkit-box-flex: 1;
 	display: none;
