@@ -70,28 +70,28 @@
 		</div>
 
 		<div class="scroller" id="config">
-			threshold: <input type="text" name="threshold"><br />
-			scrollHandleMinSize: <input type="text" name="scrollHandleMinSize"><br />
+			<label>threshold: <input type="text" name="threshold"></label>
+			<label>scrollHandleMinSize: <input type="text" name="scrollHandleMinSize"></label>
 			<fieldset title="flicking">
 				<legend>flicking</legend>
-				triggerThreshold: <input type="text" name="triggerThreshold"><br />
-				friction: <input type="text" name="friction"><br />
-				minSpeed: <input type="text" name="minSpeed"><br />
-				timingFunc: <input type="text" name="timingFunc"><br />
+				<label>triggerThreshold: <input type="text" name="triggerThreshold"></label>
+				<label>friction: <input type="text" name="friction"></label>
+				<label>minSpeed: <input type="text" name="minSpeed"></label>
+				<label>timingFunc: <input type="text" name="timingFunc"></label>
 			</fieldset>
-			
+
 			<fieldset title="elasticity">
 				<legend>elasticity</legend>
-				factorDrag: <input type="text" name="factorDrag"><br />
-				factorFlick: <input type="text" name="factorFlick"><br />
-				max: <input type="text" name="max"><br />
+				<label>factorDrag: <input type="text" name="factorDrag"></label>
+				<label>factorFlick: <input type="text" name="factorFlick"></label>
+				<label>max: <input type="text" name="max"></label>
 			</fieldset>
-			
+
 			<fieldset title="snapBack">
 				<legend>snapBack</legend>
-				timingFunc: <input type="text" name="timingFunc"><br />
-				defaultTime: <input type="text" name="defaultTime"><br />
-				alwaysDefaultTime: <input type="text" name="alwaysDefaultTime"><br />
+				<label>timingFunc: <input type="text" name="timingFunc"></label>
+				<label>defaultTime: <input type="text" name="defaultTime"></label>
+				<label>alwaysDefaultTime: <input type="checkbox" name="alwaysDefaultTime"></label>
 			</fieldset>
 
 		</div>
@@ -153,22 +153,28 @@
 		});
 		tab.className = "current";
 	}
-	
-	document.querySelector("#config").addEventListener("keyup", function(evt){
+
+	function onConfigChange(evt){
 		var node = evt.target;
+		if(node.nodeName.toLowerCase() != "input"){ return }
+
 		var value = node.value;
-		var curNamespace = (node.parentNode.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[node.parentNode.title] : TouchScroll.prototype.config;
+		var group = node.parentNode.parentNode;
+		var curNamespace = (group.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[group.title] : TouchScroll.prototype.config;
 		var valueName = node.name;
 		// Parse value
-		if (value.indexOf(",")!=-1){ // Is it an array?
-			curNamespace[valueName] = value.split(",");
-		} else if(value=="true" || value=="false"){
-			curNamespace[valueName] = value=="true" ? true : false;
+		if(curNamespace[valueName] instanceof Array){ // Is it an array?
+			curNamespace[valueName] = value.split(",").map(parseFloat);
+		} else if(node.type == "checkbox"){
+			curNamespace[valueName] = node.checked;
 		} else {
 			curNamespace[valueName] = parseInt(value);
 		}
-	})
-	
+	}
+
+	document.querySelector("#config").addEventListener("keyup", onConfigChange);
+	document.querySelector("#config").addEventListener("change", onConfigChange);
+
 	//
 	// Init config values
 	//
@@ -176,10 +182,15 @@
 	var inputNodes = document.querySelectorAll("input");
 	for (var i=0, l=inputNodes.length, node; i<l; i++){
 		node = inputNodes[i];
-		var curNamespace = (node.parentNode.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[node.parentNode.title] : TouchScroll.prototype.config;
-		node.value = curNamespace[node.name];
+		var group = node.parentNode.parentNode;
+		var curNamespace = (group.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[group.title] : TouchScroll.prototype.config;
+		if(node.type == "checkbox"){
+			node.checked = curNamespace[node.name];
+		} else {
+			node.value = curNamespace[node.name];
+		}
 	}
-	
+
 }())
 </script>
 

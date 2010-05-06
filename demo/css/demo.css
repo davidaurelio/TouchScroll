@@ -149,7 +149,7 @@ h1 {
 	background: none center no-repeat;
 	content: "";
 	display: block;
-	font: bold 32px/35px inherit;
+	font: bold 32px/35px Helvetica, Arial, sans-serif;
 	height: 35px;
 	margin-top: -35px;
 	text-align: center;
@@ -207,8 +207,8 @@ h2, p {
 #horiz .touchScrollHandle {
 	background-color: rgba(255, 255, 255, 0.5);
 	border: none;
-	min-height: 6px;
-	min-width: 6px;
+	min-height: 7px;
+	min-width: 7px;
 }
 
 .figure {
@@ -233,4 +233,50 @@ h2, p {
 .legend a {
 	color: #1F1A6B;
 	text-decoration: none;
+}
+
+#config {
+	color: #000;
+	background: #cbd2d8 repeat-x;
+	background-image: -webkit-gradient(linear, 0 0, 7 0, from(#cbd2d8), color-stop(.714285714285714, #cbd2d8), color-stop(.714285714285714, #c5ccd4), to(#c5ccd4));
+}
+
+fieldset {
+	border: none;
+	padding: 0;
+}
+
+legend, label {
+	font-weight: bold;
+	padding: 1.1875em 1em;
+}
+
+legend {
+	color: #4d576b;
+	padding-bottom: 0;
+	text-shadow: white 0 1px 0;
+}
+
+label {
+	background: white;
+	border: 1px solid #a9abae;
+	border-width: 0 1px 1px;
+	display: block;
+}
+
+label:first-of-type {
+	border-top-width: 1px;
+	-webkit-border-top-left-radius: 7px;
+	-webkit-border-top-right-radius: 7px;
+}
+
+label:last-of-type {
+	-webkit-border-bottom-left-radius: 7px;
+	-webkit-border-bottom-right-radius: 7px;
+}
+
+input {
+	float: right;
+	width: 7em;
+	text-align: right;
 }
