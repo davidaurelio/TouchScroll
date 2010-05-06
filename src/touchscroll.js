@@ -575,13 +575,9 @@ TouchScroll.prototype = {
 
 
 			var node = event.target;
-			while(node.nodeType != 1){
-				node = node.parentNode;
+			if(node.focus){
+				node.focus();
 			}
-			var focusEvent = document.createEvent("HTMLEvents");
-			focusEvent.initEvent("focus", false, false);
-			node.dispatchEvent(focusEvent);
-			//node.focus();
 
 			var clickEvent = document.createEvent("MouseEvent");
 			clickEvent.initMouseEvent(
