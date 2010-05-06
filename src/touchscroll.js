@@ -254,7 +254,7 @@ document.addEventListener(events.cancel, TouchScroll, false);
 */
 function TouchScroll(/*HTMLElement*/scrollElement, /*Object*/options){
 	options = options || {};
-	this.elastic = !!options.elastic,
+	this.elastic = !!options.elastic;
 
 	// references to scroll div elements
 	this.scrollers = {
@@ -318,6 +318,7 @@ TouchScroll.prototype = {
 	// references the currently active scroller
 	// static property!
 	currentScroller: null,
+	config: config, // static for now ... this makes writing the demo for the live-editiing simpler :) maybe redesign to have it for instance, dont know if it makes sense having multiple UXs per site ....
 
 	// Maps event types to method names.
 	handlerNames: {

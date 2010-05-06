@@ -69,18 +69,48 @@
 			<h2>Yet to be done</h2>
 		</div>
 
+		<div class="scroller" id="config">
+			threshold: <input type="text" name="threshold"><br />
+			scrollHandleMinSize: <input type="text" name="scrollHandleMinSize"><br />
+			<fieldset title="flicking">
+				<legend>flicking</legend>
+				triggerThreshold: <input type="text" name="triggerThreshold"><br />
+				friction: <input type="text" name="friction"><br />
+				minSpeed: <input type="text" name="minSpeed"><br />
+				timingFunc: <input type="text" name="timingFunc"><br />
+			</fieldset>
+			
+			<fieldset title="elasticity">
+				<legend>elasticity</legend>
+				factorDrag: <input type="text" name="factorDrag"><br />
+				factorFlick: <input type="text" name="factorFlick"><br />
+				max: <input type="text" name="max"><br />
+			</fieldset>
+			
+			<fieldset title="snapBack">
+				<legend>snapBack</legend>
+				timingFunc: <input type="text" name="timingFunc"><br />
+				defaultTime: <input type="text" name="defaultTime"><br />
+				alwaysDefaultTime: <input type="text" name="alwaysDefaultTime"><br />
+			</fieldset>
+
+		</div>
+
 		<div class="tabs">
 			<a href="#about" class="current">About</a>
 			<a href="#horiz">Horizontal</a>
 			<a href="#twodim">2-Dimensional</a>
+			<a href="#config">Config</a>
 		</div>
 	</div>
 </div>
 
-<script src="../dist/touchscroll.min.js"></script>
+<script src="../src/touchscroll.js"></script>
+<script src="../../css-beziers/src/css-beziers.js"></script>
 <script>
 (function(){
-	scrollers = {};
+	var scrollers = {};
+	var query = document.querySelector;
 
 	function showScreen(screenId){
 		try{
@@ -124,6 +154,33 @@
 		});
 		tab.className = "current";
 	}
+	
+	document.querySelector("#config").addEventListener("keyup", function(evt){
+		var node = evt.target;
+		var value = node.value;
+		var curNamespace = (node.parentNode.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[node.parentNode.title] : TouchScroll.prototype.config;
+		var valueName = node.name;
+		// Parse value
+		if (value.indexOf(",")!=-1){ // Is it an array?
+			curNamespace[valueName] = value.split(",");
+		} else if(value=="true" || value=="false"){
+			curNamespace[valueName] = value=="true" ? true : false;
+		} else {
+			curNamespace[valueName] = parseInt(value);
+		}
+	})
+	
+	//
+	// Init config values
+	//
+	var configNode = document.getElementById("config");
+	var inputNodes = document.querySelectorAll("input");
+	for (var i=0, l=inputNodes.length, node; i<l; i++){
+		node = inputNodes[i];
+		var curNamespace = (node.parentNode.nodeName.toLowerCase()=="fieldset") ? TouchScroll.prototype.config[node.parentNode.title] : TouchScroll.prototype.config;
+		node.value = curNamespace[node.name];
+	}
+	
 }())
 </script>
 
