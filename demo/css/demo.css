@@ -237,8 +237,8 @@ h2, p {
 
 #config {
 	color: #000;
-	background: #cbd2d8 repeat-x;
-	background-image: -webkit-gradient(linear, 0 0, 7 0, from(#cbd2d8), color-stop(.714285714285714, #cbd2d8), color-stop(.714285714285714, #c5ccd4), to(#c5ccd4));
+	background-image: -webkit-gradient(linear, 0 0, 7 0, color-stop(.714285714285714, #c5ccd4), color-stop(.714285714285714, #cbd2d8), to(#cbd2d8));
+	-webkit-background-size: 7px 100%;
 }
 
 fieldset {
@@ -277,6 +277,12 @@ label:last-of-type {
 
 input {
 	float: right;
-	width: 7em;
+	font-family: inherit;
+	font-size: 1em;
 	text-align: right;
 }
+
+input:not([type="checkbox"]) {
+	width: 5em;
+}
+

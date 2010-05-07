@@ -168,12 +168,12 @@
 		} else if(node.type == "checkbox"){
 			curNamespace[valueName] = node.checked;
 		} else {
-			curNamespace[valueName] = parseInt(value);
+			curNamespace[valueName] = parseFloat(value);
 		}
 	}
 
-	document.querySelector("#config").addEventListener("keyup", onConfigChange);
-	document.querySelector("#config").addEventListener("change", onConfigChange);
+	document.querySelector("#config").addEventListener("keyup", onConfigChange, false);
+	document.querySelector("#config").addEventListener("change", onConfigChange, false);
 
 	//
 	// Init config values
