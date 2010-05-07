@@ -529,11 +529,10 @@ TouchScroll.prototype = {
 		*/
 		if(wasAnimating){
 			event.preventDefault();
-		}else if(android){
+		}else if(android && event.target.nodeName.toLowerCase() != "select"){
 			event.preventDefault();
 			document.activeElement.blur(); //FIXME: Does this actually do something?
 		}
-
 	},
 
 	// Handles touch move events on the scroller
