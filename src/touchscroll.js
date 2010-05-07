@@ -110,6 +110,14 @@ var TouchScroll = (function(){
 	}());
 
 	//
+	// PLATFORM SNIFFING
+	// TODO: Replace this with bug detection if possible. Creating and dispatching
+	// events on a dummy event with timeouts does not work on android ...
+	//
+	var android = navigator.userAgent.match(/Android\s+(\d+(?:\.\d+)?)/);
+	android = android && parseFloat(android[1]);
+
+	//
 	// FEATURE BASED CODE BRANCHING
 	//
 
@@ -503,7 +511,9 @@ TouchScroll.prototype = {
 		this._trackedEvents = [];
 		this._determineOffset();
 		this._trackEvent(event);
-		this._startEventTarget = event.target; // We track this to work around a bug in android, see below
+		if(android){
+			this._startEventTarget = event.target; // We track this to work around a bug in android, see below
+		}
 		var wasAnimating = this._stopAnimations();
 
 		this._startEvent = event;
@@ -517,9 +527,12 @@ TouchScroll.prototype = {
 			Also, we need to cancel the touchstart event to prevent android from
 			queuing up move events and fire them only when the touch ends.
 		*/
-		//if(wasAnimating){
+		if(wasAnimating){
 			event.preventDefault();
-		//}
+		}else if(android){
+			event.preventDefault();
+			document.activeElement.blur(); //FIXME: Does this actually do something?
+		}
 
 	},
 
@@ -561,44 +574,53 @@ TouchScroll.prototype = {
 	},
 
 	onTouchEnd: function onTouchEnd(event){
-		var startTarget = this._startEventTarget;
+		if(android && !this._isScrolling){
+			var target = event.target, startTarget = this._startEventTarget;
 
-		if(!this._isScrolling && startTarget == event.target){
-		/*
-			If no scroll has been made, the touchend event should trigger
-			a focus and a click (if occurring on the same node as the
-			touchstart event).
-			Unfortunately, we've canceled the touchstart event to work around
-			a bug in android -- so we need to dispatch our own focus and
-			click events.
-		*/
-
-
-			var node = event.target;
-			if(node.focus){
-				node.focus();
+			// find the nearest common ancestor of the start and end event targets
+			while(target){
+				if(target == startTarget || target.contains(startTarget)){
+					break;
+				}
+				target = target.parentNode;
 			}
 
-			var clickEvent = document.createEvent("MouseEvent");
-			clickEvent.initMouseEvent(
-				"click", //type
-				true, //canBubble
-				true, //cancelable
-				event.view,
-				1, //detail (number of clicks for mouse events)
-				event.screenX,
-				event.screenY,
-				event.clientX,
-				event.clientY,
-				event.ctrlKey,
-				event.altKey,
-				event.shiftKey,
-				event.metaKey,
-				event.button,
-				null// relatedTarget
-			);
-			node.dispatchEvent(clickEvent);
-		}else if(this._isScrolling){
+			if(target){
+				/*
+					If no scroll has been made, the touchend event should
+					trigger a focus and a click on the nearest common ancestor
+					of the start and end event targets.
+					On Android, we've canceled the touchstart event to work
+					around the "touchmove queuing up" bug -- so we need to
+					dispatch our own blur, focus and click events.
+				*/
+
+				if(target.focus){
+					target.focus();
+				}
+
+				var clickEvent = document.createEvent("MouseEvent");
+				clickEvent.initMouseEvent(
+					"click", //type
+					true, //canBubble
+					true, //cancelable
+					event.view,
+					1, //detail (number of clicks for mouse events)
+					event.screenX,
+					event.screenY,
+					event.clientX,
+					event.clientY,
+					event.ctrlKey,
+					event.altKey,
+					event.shiftKey,
+					event.metaKey,
+					event.button,
+					null// relatedTarget
+				);
+				target.dispatchEvent(clickEvent);
+			}
+		}
+		else if(this._isScrolling){
 			var moveSpec = this._getLastMove();
 			if(moveSpec.duration <= config.flicking.triggerThreshold && moveSpec.length){
 			/*
