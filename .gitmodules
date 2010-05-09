@@ -1,0 +1,3 @@
+[submodule "css-beziers"]
+	path = lib/css-beziers
+	url = git://github.com/davidaurelio/css-beziers.git
