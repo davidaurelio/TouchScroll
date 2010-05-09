@@ -167,11 +167,11 @@ h1 {
 }
 
 .tabs > [href="#twodim"]:before {
-	content: "\21B3";
+	content: "\2198";
 }
 
 .tabs > [href="#config"]:before {
-	content: "\2699";
+	content: "\2318,";
 }
 
 .scroller {
@@ -261,7 +261,8 @@ label {
 	background: white;
 	border: 1px solid #a9abae;
 	border-width: 0 1px 1px;
-	display: block;
+	display: -webkit-box;
+	-webkit-box-pack: justify;
 }
 
 label:first-of-type {
@@ -276,8 +277,9 @@ label:last-of-type {
 }
 
 input {
-	float: right;
+	display: block;
 	font-family: inherit;
+	font-weight: normal;
 	font-size: 1em;
 	text-align: right;
 }
@@ -285,4 +287,3 @@ input {
 input:not([type="checkbox"]) {
 	width: 5em;
 }
-
