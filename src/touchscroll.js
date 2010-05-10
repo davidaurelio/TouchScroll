@@ -112,10 +112,10 @@ var TouchScroll = (function(){
 	//
 	// PLATFORM SNIFFING
 	// TODO: Replace this with bug detection if possible. Creating and dispatching
-	// events on a dummy event with timeouts does not work on android ...
+	// events on a dummy event with timeouts does not work on Android ...
 	//
-	var android = navigator.userAgent.match(/Android\s+(\d+(?:\.\d+)?)/);
-	android = android && parseFloat(android[1]);
+	var stopStartEvent = navigator.userAgent.match(/Android\s+(\d+(?:\.\d+)?)/);
+	stopStartEvent = stopStartEvent && parseFloat(stopStartEvent[1]);
 
 	//
 	// FEATURE BASED CODE BRANCHING
@@ -511,8 +511,8 @@ TouchScroll.prototype = {
 		this._trackedEvents = [];
 		this._determineOffset();
 		this._trackEvent(event);
-		if(android){
-			this._startEventTarget = event.target; // We track this to work around a bug in android, see below
+		if(stopStartEvent){
+			this._startEventTarget = event.target; // We track this to work around a bug in Android, see below
 		}
 		var wasAnimating = this._stopAnimations();
 		this._snapBack(null, 0);
@@ -524,12 +524,12 @@ TouchScroll.prototype = {
 			If the scroller was animating, prevent the default action of the event.
 			This prevents clickable elements to be activated accidentally.
 
-			Also, we need to cancel the touchstart event to prevent android from
+			Also, we need to cancel the touchstart event to prevent Android from
 			queuing up move events and fire them only when the touch ends.
 		*/
 		if(wasAnimating){
 			event.preventDefault();
-		}else if(android && event.target.nodeName.toLowerCase() != "select"){
+		}else if(stopStartEvent && event.target.nodeName.toLowerCase() != "select"){
 			event.preventDefault();
 			document.activeElement.blur(); //FIXME: Does this actually do something?
 		}
@@ -573,7 +573,7 @@ TouchScroll.prototype = {
 	},
 
 	onTouchEnd: function onTouchEnd(event){
-		if(android && !this._isScrolling){
+		if(stopStartEvent && !this._isScrolling){
 			var target = event.target, startTarget = this._startEventTarget;
 
 			// find the nearest common ancestor of the start and end event targets
