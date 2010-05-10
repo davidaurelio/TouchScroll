@@ -665,9 +665,12 @@ TouchScroll.prototype = {
 	},
 
 	_preventNextClick: function _preventNextClick(){
-		this.scrollers.container.addEventListener("click", function prevent(event){
+		var scroller = this.scrollers.container;
+		scroller.style.webkitTapHighlightColor = "transparent";
+		node.addEventListener("click", function prevent(event){
 			event.stopPropagation();
 			this.removeEventListener("click", prevent, true);
+			this.style.webkitTapHighlightColor = "";
 		}, true);
 	},
 
