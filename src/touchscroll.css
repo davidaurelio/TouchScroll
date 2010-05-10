@@ -1,12 +1,9 @@
 .touchScrollBars {
 	display: -webkit-box;
 	padding: 3px;
-	position: relative;
-	float: left;
-	margin-left: -100%;
+	position: absolute;
 	width: 100%;
 	z-index: 2147483647;
-	-webkit-transform: translateX(100%);
 	-webkit-box-align: end;
 	-webkit-box-pack: end;
 	-webkit-box-sizing: border-box;
