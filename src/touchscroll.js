@@ -515,9 +515,9 @@ TouchScroll.prototype = {
 			this._startEventTarget = event.target; // We track this to work around a bug in android, see below
 		}
 		var wasAnimating = this._stopAnimations();
+		this._snapBack(null, 0);
 
 		this._startEvent = event;
-
 		event.stopPropagation();
 
 		/*
@@ -1126,7 +1126,9 @@ TouchScroll.prototype = {
 			return snapBackE || snapBackF;
 		}
 
-		duration = duration || config.snapBack.defaultTime;
+		if(duration == null){
+			duration = config.snapBack.defaultTime;
+		}
 
 		var scroller = this.scrollers[axis],
 			offset = getMatrixFromNode(scroller),
