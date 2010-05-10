@@ -53,7 +53,7 @@ Limitations/Known Issues
    child selector (`#scroller > foo`) might not work as expected.
  - When a scroller is invisible, it can’t adapt its size correctly. Call its `setupScroller` method to fix that (e.g. after making a scroller visible by setting `display: block` on it).
  - Tapping the status bar on iPhone doesn’t trigger “scroll to top”.
- - Selecting text doesn’t work on the iPad and on some iPhone versions (OS 4.0b2) – an issue with cancelling events?
+ - Selecting text doesn’t work on the iPad and on some iPhone versions (OS 4.0b2) – an issue with cancelling events? **[Update] Some code changed since these issues have been reported. Could anybody whith access to those devices/versions re-test it?**
 
 
 
