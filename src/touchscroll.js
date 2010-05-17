@@ -476,7 +476,7 @@ TouchScroll.prototype = {
     _createKeyframes: function _createKeyframes() {
         var sheet = this._styleSheet, i = sheet.length;
         var name = "touchScrollAnimation-" + this._numKeyframeRules++;
-        i = sheet.insertRule("@-webkit-keyframes" + name + "{0%{} 33%{} 66%{} to{}}", i);
+        i = sheet.insertRule("@-webkit-keyframes " + name + " {0%{} 33%{} 66%{} to{}}", i);
         var keyframes = sheet.cssRules[i];
         var frameRefs = [
             keyframes.findRule("0%"), // iPhone does not support finding keywords (from/to)
