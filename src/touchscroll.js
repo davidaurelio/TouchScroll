@@ -206,10 +206,10 @@ TouchScroll._styleSheet = (function() {
 
 [
     ".touchScroll { position: relative; }",
-    ".touchScrollBars { pointer-events: none; opacity: 0; -webkit-transition: opacity 250ms; }",
-    ".touchScrollInner { float: left; min-width: 100%; -webkit-box-sizing: border-box; }",
-    ".touchScrollTrack { display: none; }",
-    ".touchScrollTrack.active { display: block; }"
+    ".tsBars { pointer-events: none; opacity: 0; -webkit-transition: opacity 250ms; }",
+    ".tsInner { float: left; min-width: 100%; -webkit-box-sizing: border-box; }",
+    ".tsBar { display: none; }",
+    ".tsBar.active { display: block; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
@@ -272,14 +272,18 @@ TouchScroll._setStyleOffset = function _setMatrixOnStyle(style, matrix){
  */
 TouchScroll._scrollerTemplate = [
     '<div>',
-        '<div class="touchScrollInner"></div>',
+        '<div class="tsInner"></div>',
     '</div>',
-    '<div class="touchScrollBars">',
-        '<div class="touchScrollTrack touchScrollTrackX">',
-            '<div class="touchScrollHandle"></div>',
+    '<div class="tsBars">',
+        '<div class="tsBar tsBarX">',
+            '<div class="tsBar1"></div>',
+            '<div class="tsBar2"></div>',
+            '<div class="tsBar3"></div>',
         '</div>',
-        '<div class="touchScrollTrack touchScrollTrackY">',
-            '<div class="touchScrollHandle"></div>',
+        '<div class="tsBar tsBarY">',
+            '<div class="tsBar1"></div>',
+            '<div class="tsBar2"></div>',
+            '<div class="tsBar3"></div>',
         '</div>',
     '</div>'
 ].join("");
@@ -513,21 +517,21 @@ TouchScroll.prototype = {
 
         // setup references to scroller HTML nodes
         dom.scrollers = {
-            inner: scrollElement.querySelector(".touchScrollInner")
+            inner: scrollElement.querySelector(".tsInner")
         };
         dom.scrollers.e = dom.scrollers.inner.parentNode;
         dom.scrollers.f = dom.scrollers.inner;
 
         dom.bars = {
-            outer: scrollElement.querySelector(".touchScrollBars"),
+            outer: scrollElement.querySelector(".tsBars"),
             tracks: {
-                e: scrollElement.querySelector(".touchScrollTrackX"),
-                f: scrollElement.querySelector(".touchScrollTrackY")
+                e: scrollElement.querySelector(".tsBarX"),
+                f: scrollElement.querySelector(".tsBarY")
             }
         };
         dom.bars.handles = {
-            e: dom.tracks.e.querySelector(".touchScrollHandle"),
-            f: dom.tracks.f.querySelector(".touchScrollHandle")
+            e: dom.tracks.e.querySelector(".tsHandle"),
+            f: dom.tracks.f.querySelector(".tsHandle")
         };
 
         // add animation names

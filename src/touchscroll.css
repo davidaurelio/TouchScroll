@@ -1,4 +1,4 @@
-.touchScrollBars {
+.tsBars {
 	display: -webkit-box;
 	padding: 3px;
 	position: absolute;
@@ -9,54 +9,31 @@
 	-webkit-box-sizing: border-box;
 }
 
-.touchScrollTrack {
+.tsBar {
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
 }
 
-.touchScrollTrackX {
+.tsBarX {
 	height: 6px;
 }
 
-.touchScrollTrackY {
+.tsBarY {
 	float: right;
 	width: 6px;
 }
 
-.touchScrollBarsBoth {
+.tsBarsBoth {
 	padding-bottom: 12px;
 	padding-right: 12px;
 }
 
-.touchScrollBarsBoth .touchScrollTrackX {
+.tsBarsBoth .tsBarX {
 	-webkit-transform: translateY(9px);
 }
 
-.touchScrollBarsBoth .touchScrollTrackY {
+.tsBarsBoth .tsBarY {
 	-webkit-transform: translateX(3px);
 }
 
-.touchScrollHandle {
-	border: 1px solid;
-	min-height: 4px;
-	min-width: 4px;
-	-webkit-transition-property: -webkit-transform, height, width;
-	-webkit-border-radius: 3px;
-
-	/* COLOR VARIANTS */
-/* Default */
-	border-color: rgba(255, 255, 255, 0.15);
-	background: rgba(0, 0, 0, 0.5);
-/**/
-
-/* White
-	border-color: rgba(255, 255, 255, 0.5);
-	background: rgba(255, 255, 255, 0.5);
-/**/
-
-/* Black
-	border-color: rgba(0, 0, 0, 0.5);
-	background: rgba(0, 0, 0, 0.5);
-/**/
-}
