@@ -551,12 +551,12 @@ TouchScroll.prototype = {
         if(scrollbars){
             var bars = dom.bars = {
                 outer: scrollElement.querySelector(".tsBars"),
-                indicators: {}
+                parts: {}
             };
 
             ["e", "f"].forEach(function(axis){
                 bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
-                bars.indicators[axis] = [
+                bars.parts[axis] = [
                     bars[axis].querySelector(".tsBar1"),
                     bars[axis].querySelector(".tsBar2"),
                     bars[axis].querySelector(".tsBar3")
