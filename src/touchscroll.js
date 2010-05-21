@@ -461,16 +461,13 @@ TouchScroll.prototype = {
         // hide/show scrollbars
         var bars = dom.bars;
         if(bars){
-            var trackE = bars.tracks.e;
-            var trackF = bars.tracks.f;
+            ["e", "f"].forEach(function(axis){
+                var bar = bars[axis];
+                bar.className = bar.className.replace(" active", "");
+            });
 
-            trackE.className = trackE.className.replace(" active", "");
-            trackF.className = trackF.className.replace(" active", "");
-            if (isScrolling.e) {
-                trackE.className += " active";
-            }
-            if (isScrolling.f) {
-                trackF.className += " active";
+            if (isScrolling[axis]) {
+                bar.className += " active";
             }
         }
 
