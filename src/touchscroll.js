@@ -304,6 +304,9 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether the scroller bounces across its bounds. */
     this.elastic = !!options.elastic;
 
+    /** @type {Boolean} Whether to build and use scrollbars. */
+    var useScrollbars = options.scrollbars == null ? true : !!options.scrollbars;
+
     /** @type {Object} Holds references to the DOM nodes used by the scroller. */
     this._dom = {
         /** @type {HTMLElement} A reference to the outer/main DOM node. */
@@ -525,29 +528,35 @@ TouchScroll.prototype = {
         }
 
         // setup references to scroller HTML nodes
-        dom.scrollers = {
+        var scrollers = dom.scrollers = {
             inner: scrollElement.querySelector(".tsInner")
         };
-        dom.scrollers.e = dom.scrollers.inner.parentNode;
-        dom.scrollers.f = dom.scrollers.inner;
-
-        dom.bars = {
-            outer: scrollElement.querySelector(".tsBars"),
-            tracks: {
-                e: scrollElement.querySelector(".tsBarX"),
-                f: scrollElement.querySelector(".tsBarY")
-            }
-        };
-        dom.bars.handles = {
-            e: dom.tracks.e.querySelector(".tsHandle"),
-            f: dom.tracks.f.querySelector(".tsHandle")
-        };
+        scrollers.e = scrollers.inner.parentNode;
+        scrollers.f = scrollers.inner;
 
         // add animation names
-        dom.scrollers.e.style.webkitAnimationName = this._animations.scrollers.e.name;
-        dom.scrollers.f.style.webkitAnimationName = this._animations.scrollers.f.name;
-        dom.bars.e.style.webkitAnimationName = this._animations.bars.e.name;
-        dom.bars.f.style.webkitAnimationName = this._animations.bars.f.name;
+        var animations = this._animations;
+        scrollers.e.style.webkitAnimationName = animations.scrollers.e.name;
+        scrollers.f.style.webkitAnimationName = animations.scrollers.f.name;
+
+        if(scrollbars){
+            var bars = dom.bars = {
+                outer: scrollElement.querySelector(".tsBars"),
+                indicators: {}
+            };
+
+            ["e", "f"].forEach(function(axis){
+                bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
+                bars.indicators[axis] = [
+                    bars[axis].querySelector(".tsBar1"),
+                    bars[axis].querySelector(".tsBar2"),
+                    bars[axis].querySelector(".tsBar3")
+                ];
+
+                // add animation name
+                bars[axis].style.webkitAnimationName = animations.bars[axis];
+            });
+        }
 
         // register event listeners
         scrollElement.addEventListener(TouchScroll._events.start, this);
