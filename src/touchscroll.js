@@ -270,30 +270,33 @@ TouchScroll._setStyleOffset = function _setMatrixOnStyle(style, matrix){
  * @private
  * @type {String} HTML for TouchScroll instances.
  */
-TouchScroll._scrollerTemplate = [
-    '<div>',
-        '<div class="tsInner"></div>',
-    '</div>',
+TouchScroll._scrollerTemplate = '<div><div class="tsInner"></div></div>';
+
+/**
+ * @private
+ * @type {String} HTML for scrollbars. Used on instances with scrollbars.
+ */
+TouchScroll._scrollbarTemplate = [
     '<div class="tsBars">',
-        '<div class="tsBar tsBarX">',
+        '<div class="tsBar tsBarE">',
             '<div class="tsBar1"></div>',
             '<div class="tsBar2"></div>',
             '<div class="tsBar3"></div>',
         '</div>',
-        '<div class="tsBar tsBarY">',
+        '<div class="tsBar tsBarF">',
             '<div class="tsBar1"></div>',
             '<div class="tsBar2"></div>',
             '<div class="tsBar3"></div>',
         '</div>',
     '</div>'
-].join("");
-
+].join("\n");
 
 /**
  * @class
  * @param {HTMLElement} scrollElement The HTML element to make scrollable.
  * @param {Objects} [options] An expando for options. Supported options are:#
- *                            - elastic {Boolean}, defaults to `true`
+ *                            - elastic {Boolean}, defaults to `false`
+ *                            - scrollbars {Boolean}, defaults to `true`
  */
 function TouchScroll(scrollElement, options) {
     options = options || {};
@@ -313,10 +316,10 @@ function TouchScroll(scrollElement, options) {
             e: this._createKeyframes(),
             f: this._createKeyframes()
         },
-        bars: {
+        bars: (useScrollbars ? {
             e: this._createKeyframes(),
             f: this._createKeyframes()
-        }
+        } : null)
     };
 
     /**
@@ -344,6 +347,8 @@ function TouchScroll(scrollElement, options) {
      */
     this._isScrolling = {e: false, f: false, general: false};
 
+
+    this._initDom(useScrollbars);
 
 }
 
@@ -499,8 +504,9 @@ TouchScroll.prototype = {
      * Inserts additional elements for scrolling layers and scrollbars/indicators.
      *
      * @private
+     * @param {Boolean} scrollbars Whether to build scrollbars.
      */
-    _initDom: function _initDom() {
+    _initDom: function _initDom(scrollbars) {
         var dom = this._dom;
         var scrollElement = dom.outer;
 
@@ -514,6 +520,9 @@ TouchScroll.prototype = {
 
         // set innerHTML from template
         scrollElement.innerHTML = TouchScroll._scrollerTemplate;
+        if(scrollbars){
+            scrollElement.innerHTML += TouchScroll._scrollbarTemplate;
+        }
 
         // setup references to scroller HTML nodes
         dom.scrollers = {
