@@ -471,20 +471,17 @@ TouchScroll.prototype = {
             if (isScrolling[axis]) {
                 bar.className += " active";
             }
+
+            // calculate and apply scroll indicator sizes
+            var scrollHandleMinSize = this.config.scrollHandleMinSize;
+            var barSizes = this._barSizes;
+            barSizes.e = Math.round(Math.max(
+                bars.e.offsetWidth * offsetWidth / scrollWidth
+            ));
+            barSizes.f = Math.round(Math.max(
+                bars.f.offsetWidth * offsetHeight / scrollHeight
+            ));
         }
-
-        // calculate and apply scroll bar handle sizes
-        var scrollHandleMinSize = this.config.scrollHandleMinSize;
-        dom.bars.handles.e.style.width = Math.round(Math.max(
-            trackE.offsetWidth * offsetWidth / scrollWidth,
-            scrollHandleMinSize
-        )) + "px";
-        dom.bars.handles.f.style.height = Math.round(Math.max(
-            trackF.offsetHeight * offsetHeight / scrollHeight,
-            scrollHandleMinSize
-        )) + "px";
-
-
     },
 
     /**
