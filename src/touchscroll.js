@@ -350,9 +350,7 @@ function TouchScroll(scrollElement, options) {
      */
     this._isScrolling = {e: false, f: false, general: false};
 
-
     this._initDom(useScrollbars);
-
 }
 
 TouchScroll.prototype = {
@@ -452,16 +450,18 @@ TouchScroll.prototype = {
 
         // hide/show scrollbars
         var bars = dom.bars;
-        var trackE = bars.tracks.e;
-        var trackF = bars.tracks.f;
+        if(bars){
+            var trackE = bars.tracks.e;
+            var trackF = bars.tracks.f;
 
-        trackE.className = trackE.className.replace(" active", "");
-        trackF.className = trackF.className.replace(" active", "");
-        if (isScrolling.e) {
-            trackE.className += " active";
-        }
-        if (isScrolling.f) {
-            trackF.className += " active";
+            trackE.className = trackE.className.replace(" active", "");
+            trackF.className = trackF.className.replace(" active", "");
+            if (isScrolling.e) {
+                trackE.className += " active";
+            }
+            if (isScrolling.f) {
+                trackF.className += " active";
+            }
         }
 
         // calculate and apply scroll bar handle sizes
