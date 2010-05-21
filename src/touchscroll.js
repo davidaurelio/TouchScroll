@@ -429,27 +429,29 @@ TouchScroll.prototype = {
         var dom = this._dom;
         var scrollerElement = dom.outer;
 
-        var offsetDim = [scrollerElement.offsetWidth, scrollerElement.offsetHeight];
-        var scrollDim = [scrollerElement.scrollWidth, scrollerElement.scrollHeight];
+        var offsetWidth = scrollerElement.offsetWidth;
+        var offsetHeight = scrollerElement.offsetHeight;
+        var scrollWidth = scrollerElement.scrollWidth;
+        var scrollHeight = scrollerElement.scrollHeight;
         var m = this._metrics;
 
         // Check whether we really need to refresh ... if not, leave here.
         if (!force &&
-            offsetDim[0] == m.offsetWidth && offsetDim[1] == m.offsetHeight &&
-            scrollDim[0] == m.scrollWidth && scrollDim[1] == m.scrollHeight
+            offsetWidth == m.offsetWidth && offsetHeight == m.offsetHeight &&
+            scrollWidth == m.scrollWidth && scrollHeight == m.scrollHeight
         ) {
                 return;
         }
 
-        m.offsetWidth = offsetDim[0];
-        m.offsetHeight = offsetDim[1];
-        m.scrollWidth = scrollDim[0];
-        m.scrollHeight = scrollDim[1];
+        m.offsetWidth = offsetWidth;
+        m.offsetHeight = offsetHeight;
+        m.scrollWidth = scrollWidth;
+        m.scrollHeight = scrollHeight;
 
         // instance properties
         var maxOffsets = this._maxOffsets = {
-            e: Math.max(scrollDim[0] - offsetDim[0]),
-            f: Math.max(scrollDim[1] - offsetDim[1])
+            e: Math.max(scrollWidth - offsetWidth),
+            f: Math.max(scrollHeight - offsetHeight)
         };
 
         var isScrolling = this._isScrolling = {
@@ -474,11 +476,11 @@ TouchScroll.prototype = {
         // calculate and apply scroll bar handle sizes
         var scrollHandleMinSize = this.config.scrollHandleMinSize;
         dom.bars.handles.e.style.width = Math.round(Math.max(
-            trackE.offsetWidth * offsetDim[0] / scrollDim[0],
+            trackE.offsetWidth * offsetWidth / scrollWidth,
             scrollHandleMinSize
         )) + "px";
         dom.bars.handles.f.style.height = Math.round(Math.max(
-            trackF.offsetHeight * coffsetDim[1] / scrollDim[1],
+            trackF.offsetHeight * offsetHeight / scrollHeight,
             scrollHandleMinSize
         )) + "px";
 
