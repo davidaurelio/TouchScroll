@@ -350,6 +350,16 @@ function TouchScroll(scrollElement, options) {
      */
     this._isScrolling = {e: false, f: false, general: false};
 
+    /**
+     * Stores the calculated sizes of the scroll indicators.
+     *
+     * @type {Object}
+     */
+    this._barSizes = {e: 0, f: 0};
+
+    /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
+    this._barEndSize = 0;
+
     this._initDom(useScrollbars);
 }
 
