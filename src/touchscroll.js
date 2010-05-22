@@ -262,7 +262,7 @@ TouchScroll._getEventOffset = function _getEventOffset(event) {
  * @param {CSSStyleDeclaration} style
  * @param {WebKitCSSNatrix} matrix
  */
-TouchScroll._setStyleOffset = function _setMatrixOnStyle(style, matrix){
+TouchScroll._setStyleOffset = function _setStyleOffset(style, matrix){
     style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
 }
 
