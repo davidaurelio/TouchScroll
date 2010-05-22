@@ -478,6 +478,21 @@ TouchScroll.prototype = {
             barSizes.f = Math.round(Math.max(
                 bars.f.offsetWidth * offsetHeight / scrollHeight
             ));
+
+            var endSize = this._barMetrics.endSize;
+            ["e", "f"].forEach(function(axis){
+                var axisParts = dom.bars.parts[axis];
+                var style1 = axisParts[1].style;
+                var offset = new WebKitCSSMatrix();
+                var setOffset = TouchScroll._setStyleOffset;
+                var scale = barSizes[axis] - endSize * 2;
+                offset[axis] = endSize;
+                setOffset(style1, offset)
+                style1.webkitTransform += " scale(" + scale + ")";
+
+                offset[axis] += scale - 1;
+                setOffset(axisParts[2].style, offset);
+            });
         }
     },
 
@@ -559,6 +574,13 @@ TouchScroll.prototype = {
                 // add animation name
                 bars[axis].style.webkitAnimationName = animations.bars[axis];
             });
+
+            var cs = window.getComputedStyle(bars.parts.e[0]);
+            this._barMetrics.endSize =
+                parseFloat(cs.paddingTop) +
+                parseFloat(cs.height) +
+                parseFloat(cs.paddingBottom);
+            cs = null; // release live objects
         }
 
         // register event listeners
