@@ -220,7 +220,7 @@ TouchScroll._styleSheet = (function() {
 TouchScroll._getNodeOffset = (function() {
     if (TouchScroll._parsesMatrixCorrectly) {
         return function _getNodeOffset(node) {
-            var computedStyle = document.defaultView.getComputedStyle(node);
+            var computedStyle = window.getComputedStyle(node);
             return new WebKitCSSMatrix(computedStyle.webkitTransform);
         };
     }
@@ -229,7 +229,7 @@ TouchScroll._getNodeOffset = (function() {
     return function _getNodeOffset(node) {
         var matrix = new WebKitCSSMatrix();
 
-        var computedStyle = document.defaultView.getComputedStyle(node);
+        var computedStyle = window.getComputedStyle(node);
         var match = reMatrix.exec(computedStyle.webkitTransform);
         if (match) {
             matrix.e = match[1];
