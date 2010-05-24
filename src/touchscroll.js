@@ -416,10 +416,10 @@ TouchScroll.prototype = {
      * @param {Event} event.
      */
     handleEvent: function handleEvent(event) {
-		var handlerName = this._handlerNames[event.type];
-		if(handlerName){
-			this[handlerName](event);
-		}
+        var handlerName = this._handlerNames[event.type];
+        if(handlerName){
+            this[handlerName](event);
+        }
     },
     onTouchStart: function onTouchStart() {},
     onTouchMove: function onTouchMove() {},
