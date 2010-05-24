@@ -307,6 +307,20 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether to build and use scrollbars. */
     var useScrollbars = options.scrollbars == null ? true : !!options.scrollbars;
 
+    /** @type {Object} Holds scrollbar related metrics. */
+    this._barMetrics = {
+        /** @type {Object} Stores the offset height of the scrollbar "tracks". */
+        availLength: {e: 0, f: 0}, //TODO: Check if necessary!
+        /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
+        endSize: 0,
+        /** @type {Object} Stores the maximum offset for each scroll indicator. */
+        maxOffsets: {e: 0, f: 0},
+        /** @type {Object} Stores the ratio of scroll layer and scroll indicator offsets. */
+        offsetRatios: {e: 0, f:0},
+        /** @type {Object} Stores the calculated sizes of the scroll indicators. */
+        sizes: {e: 0, f: 0}
+    };
+
     /** @type {Object} Holds references to the DOM nodes used by the scroller. */
     this._dom = {
         /** @type {HTMLElement} A reference to the outer/main DOM node. */
@@ -325,10 +339,16 @@ function TouchScroll(scrollElement, options) {
         } : null)
     };
 
-    /**
-     * Stores the relevant metrics of the last call to {@link setupScroller}.
-     * @type {Object}
-     */
+    /** @type {Object} Stores whether each axis is scrolling. */
+    this._isScrolling = {e: false, f: false, general: false};
+
+    /** @type {Event[]} The last two tracked events .*/
+    this._lastEvents = [];
+
+    /** @type {Object} Stores the maximum scroll offset for each axis. */
+    this._maxOffsets = {e: 0, f: 0};
+
+    /** @type {Object} Stores the relevant metrics of the last call to {@link setupScroller}. */
     this._metrics = {
         offsetWidth: -1,
         offsetHeight: -1,
@@ -336,32 +356,8 @@ function TouchScroll(scrollElement, options) {
         scrollHeight: -1
     };
 
-    /**
-     * Stores the maximum scroll offset for each axis.
-     *
-     * @type {Object}
-     */
-    this._maxOffsets = {e: 0, f: 0};
-
-    /**
-     * Stores whether each axis is scrolling.
-     *
-     * @type {Object};
-     */
-    this._isScrolling = {e: false, f: false, general: false};
-
-    this._barMetrics = {
-        /** @type {Object} Stores the offset height of the scrollbar "tracks". */
-        availLength: {e: 0, f: 0}, //TODO: Check if necessary!
-        /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
-        endSize: 0,
-        /** @type {Object} Stores the maximum offset for each scroll indicator. */
-        maxOffsets: {e: 0, f: 0},
-        /** @type {Object} Stores the ratio of scroll layer and scroll indicator offsets. */
-        offsetRatios: {e: 0, f:0},
-        /** @type {Object} Stores the calculated sizes of the scroll indicators. */
-        sizes: {e: 0, f: 0}
-    };
+    /** @type {Boolean} Whether the scroll threshold has been exceeded. */
+    this._scrollBegan = false;
 
     this._initDom(useScrollbars);
 }
