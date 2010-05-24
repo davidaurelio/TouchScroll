@@ -437,11 +437,39 @@ TouchScroll.prototype = {
         this._scrollBegan = false;
         this._stopAnimations();
 
-
         this._lastEvents[1] = events;
     },
 
-    onTouchMove: function onTouchMove() {},
+    onTouchMove: function onTouchMove() {
+        if (!this._isTracking) {
+            return;
+        }
+
+        var lastEvents = this._lastEvents;
+        var lastEvent = lastEvents[0] = lastEvents[1];
+        lastEvents[1] = event;
+
+        var scrollOffset = {
+            e: event.pageX - lastEvent.pageX,
+            f: event.pageY - lastEvent.pageY
+        }
+
+        var scrollBegan = this._scrollBegan;
+
+        if (!scrollBegan) {
+            var threshold = this.config.threshold;
+            this._scrollBegan = scrollBegan =
+                threshold >= scrollOffset.e ||
+                threshold >= -scrollOffset.e ||
+                threshold >= scrollOffset.f ||
+                threshold >= -scrollOffset.f;
+        }
+
+        if (scrollBegan) {
+
+        }
+    },
+
     onTouchEnd: function onTouchEnd() {
         if (!this._isTracking) {
             return;
