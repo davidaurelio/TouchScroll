@@ -351,10 +351,12 @@ function TouchScroll(scrollElement, options) {
     this._isScrolling = {e: false, f: false, general: false};
 
     this._barMetrics = {
+        availLength: {e: 0, f: 0},
         /** @type {Object} Stores the calculated sizes of the scroll indicators. */
         sizes: {e: 0, f: 0},
         /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
-        endSize: 0
+        endSize: 0,
+        maxOffsets: {e: 0, f: 0}
     };
 
     this._initDom(useScrollbars);
@@ -460,23 +462,28 @@ TouchScroll.prototype = {
         // hide/show scrollbars
         var bars = dom.bars;
         if(bars){
-            ["e", "f"].forEach(function(axis){
-                var bar = bars[axis];
+            var axes = ["e", "f"];
+            for (var i = 0, axis, bar; (axis = axes[i++]); ){
+                bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
-            });
-
-            if (isScrolling[axis]) {
-                bar.className += " active";
+                if (isScrolling[axis]) {
+                    bar.className += " active";
+                }
             }
 
             // calculate and apply scroll indicator sizes
             var scrollHandleMinSize = this.config.scrollHandleMinSize;
-            var barSizes = this._barMetrics.sizes;
+            var barMetrics = this._barMetrics
+            var availLength = barMetrics.availLength;
+            availLength.e = bars.e.offsetWidth;
+            availLength.f = bars.f.offsetHeight;
+
+            var barSizes = barMetrics.sizes;
             barSizes.e = Math.round(Math.max(
-                bars.e.offsetWidth * offsetWidth / scrollWidth
+                availLength.e * offsetWidth / scrollWidth
             ));
             barSizes.f = Math.round(Math.max(
-                bars.f.offsetWidth * offsetHeight / scrollHeight
+                availLength.e * offsetHeight / scrollHeight
             ));
 
             var endSize = this._barMetrics.endSize;
