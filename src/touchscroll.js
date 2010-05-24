@@ -342,6 +342,9 @@ function TouchScroll(scrollElement, options) {
     /** @type {Object} Stores whether each axis is scrolling. */
     this._isScrolling = {e: false, f: false, general: false};
 
+    /** @type {Boolean} Whether the scroller is currently tracking touches (other than start). */
+    this._isTracking = false;
+
     /** @type {Event[]} The last two tracked events .*/
     this._lastEvents = [];
 
@@ -430,6 +433,7 @@ TouchScroll.prototype = {
         }
 
         this.setupScroller();
+        this._isTracking = true;
         this._scrollBegan = false;
         this._stopAnimations();
 
@@ -438,7 +442,12 @@ TouchScroll.prototype = {
     },
 
     onTouchMove: function onTouchMove() {},
-    onTouchEnd: function onTouchEnd() {},
+    onTouchEnd: function onTouchEnd() {
+        if (!this._isTracking) {
+            return;
+        }
+        this._isTracking = false;
+    },
     scrollTo: function scrollTo() {},
 
     /**
