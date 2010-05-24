@@ -486,20 +486,22 @@ TouchScroll.prototype = {
                 availLength.e * offsetHeight / scrollHeight
             ));
 
-            var endSize = this._barMetrics.endSize;
-            ["e", "f"].forEach(function(axis){
-                var axisParts = dom.bars.parts[axis];
-                var style1 = axisParts[1].style;
-                var offset = new WebKitCSSMatrix();
-                var setOffset = TouchScroll._setStyleOffset;
-                var scale = barSizes[axis] - endSize * 2;
-                offset[axis] = endSize;
-                setOffset(style1, offset)
+            var endSize = barMetrics.endSize;
+            var setOffset = TouchScroll._setStyleOffset;
+            for (var i = 0, axis, parts, style1, matrix, size, scale; (axis = axes[i++]); ){
+                parts = bars.parts[axis];
+                style1 = parts[1].style;
+                offset = new WebKitCSSMatrix();
+                size = barSizes[axis];
+                scale = size - endSize * 2;
+                matrix[axis] = endSize;
+                setOffset(style1, matrix)
                 style1.webkitTransform += " scale(" + scale + ")";
 
-                offset[axis] += scale - 1;
-                setOffset(axisParts[2].style, offset);
-            });
+                barMetrics.maxOffsets[axis] = availLength[axis] - size;
+                matrix[axis] += scale - 1;
+                setOffset(parts[2].style, offset);
+            };
         }
     },
 
@@ -570,17 +572,17 @@ TouchScroll.prototype = {
                 parts: {}
             };
 
-            ["e", "f"].forEach(function(axis){
-                bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
+            for (var i = 0, axes = ["e", "f"], axis, bar; (axis = axes[i++]); ){
+                var bar = bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
                 bars.parts[axis] = [
-                    bars[axis].querySelector(".tsBar1"),
-                    bars[axis].querySelector(".tsBar2"),
-                    bars[axis].querySelector(".tsBar3")
+                    bar.querySelector(".tsBar1"),
+                    bar.querySelector(".tsBar2"),
+                    bar.querySelector(".tsBar3")
                 ];
 
                 // add animation name
-                bars[axis].style.webkitAnimationName = animations.bars[axis];
-            });
+                bar.style.webkitAnimationName = animations.bars[axis];
+            };
 
             var cs = window.getComputedStyle(bars.parts.e[0]);
             this._barMetrics.endSize =
