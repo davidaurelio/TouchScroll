@@ -424,7 +424,19 @@ TouchScroll.prototype = {
             this[handlerName](event);
         }
     },
-    onTouchStart: function onTouchStart() {},
+    onTouchStart: function onTouchStart(event) {
+        if (!this._isScrolling.general) {
+            return;
+        }
+
+        this.setupScroller();
+        this._scrollBegan = false;
+        this._stopAnimations();
+
+
+        this._lastEvents[1] = events;
+    },
+
     onTouchMove: function onTouchMove() {},
     onTouchEnd: function onTouchEnd() {},
     scrollTo: function scrollTo() {},
