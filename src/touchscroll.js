@@ -314,7 +314,7 @@ function TouchScroll(scrollElement, options) {
         /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
         endSize: 0,
         /** @type {Object} Stores the maximum offset for each scroll indicator. */
-        maxOffsets: {e: 0, f: 0},
+        maxOffset: {e: 0, f: 0}, //TODO: Check if necessary!
         /** @type {Object} Stores the ratio of scroll layer and scroll indicator offsets. */
         offsetRatios: {e: 0, f:0},
         /** @type {Object} Stores the calculated sizes of the scroll indicators. */
@@ -349,7 +349,7 @@ function TouchScroll(scrollElement, options) {
     this._lastEvents = [];
 
     /** @type {Object} Stores the maximum scroll offset for each axis. */
-    this._maxOffsets = {e: 0, f: 0};
+    this._maxOffset = {e: 0, f: 0};
 
     /** @type {Object} Stores the relevant metrics of the last call to {@link setupScroller}. */
     this._metrics = {
@@ -446,13 +446,12 @@ TouchScroll.prototype = {
         }
 
         var lastEvents = this._lastEvents;
-        var lastEvent = lastEvents[0] = lastEvents[1];
-        lastEvents[1] = event;
+        var lastEvent = lastEvents[1];
 
-        var scrollOffset = {
-            e: event.pageX - lastEvent.pageX,
-            f: event.pageY - lastEvent.pageY
-        }
+        var scrollOffset = new WebKitCSSMatrix();
+        // inverse offsets because scrolling layer offsets are negative.
+        scrollOffset.e = lastEvent.pageX - event.pageX;
+        scrollOffset.f = lastEvent.pageY - event.pageY;
 
         var scrollBegan = this._scrollBegan;
 
@@ -466,7 +465,9 @@ TouchScroll.prototype = {
         }
 
         if (scrollBegan) {
-
+            this._scrollBy(scrollOffset);
+            lastEvents[0] = lastEvent;
+            lastEvents[1] = event;
         }
     },
 
@@ -505,14 +506,14 @@ TouchScroll.prototype = {
         m.scrollHeight = scrollHeight;
 
         // instance properties
-        var maxOffsets = this._maxOffsets = {
+        var maxOffset = this._maxOffset = {
             e: Math.max(scrollWidth - offsetWidth),
             f: Math.max(scrollHeight - offsetHeight)
         };
 
         var isScrolling = this._isScrolling = {
-            e: maxOffsets.e > 0,
-            f: maxOffsets.f > 0
+            e: maxOffset.e > 0,
+            f: maxOffset.f > 0
         };
         isScrolling.general = isScrolling.e || isScrolling.f;
 
@@ -555,7 +556,7 @@ TouchScroll.prototype = {
                 setOffset(style1, matrix)
                 style1.webkitTransform += " scale(" + scale + ")";
 
-                barMetrics.maxOffsets[axis] = availLength[axis] - size;
+                barMetrics.maxOffset[axis] = availLength[axis] - size;
                 matrix[axis] += scale - 1;
                 setOffset(parts[2].style, offset);
             };
@@ -682,6 +683,41 @@ TouchScroll.prototype = {
         dom.scrollers.inner.appendChild(children);
 
         this.setupScroller();
+    },
+
+    /**
+     * Scrolls by applying a transform matrix to the scroll layers.
+     *
+	 * As this method is called for every touchmove event, the code is rolled
+	 * out for both axes (leading to redundancies) to get maximum performance.
+     *
+     * @param {WebKitCSSMatrix} matrix Holds the offsets to apply.
+     */
+    _scrollBy: function _scrollBy(matrix) {
+        var isScrolling = this._isScrolling;
+        if (!isScrolling.e) {
+            matrix.e = 0;
+        }
+        if (!isScrolling.f) {
+            matrix.f = 0;
+        }
+
+        var maxOffset = this._maxOffset;
+        var scrollOffset = this._scrollOffset;
+        var newOffset = scrollOffset.multiply(matrix);
+
+        if (this.elastic) {
+            var factor = this.config.elasticity.factorDrag;
+
+            // whether the scroller was already beyond scroll bounds
+            var wasOutOfBoundsE = currentOffset.e < scrollMin.e || currentOffset.e > 0;
+            var wasOutOfBoundsF = false;
+
+        }
+
+        var newOffsetsE = newOffset.translate(0, 0, 0);
+        var newOffsetsF = newOffset.translate(0, 0, 0);
+
     },
 
     /**
