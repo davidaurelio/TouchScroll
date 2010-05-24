@@ -414,12 +414,17 @@ TouchScroll.prototype = {
     },
 
     /**
-     * DOM Level 2 event handling method.
+     * DOM Level 2 event handler method.
      *
      * @private
      * @param {Event} event.
      */
-    handleEvent: function handleEvent(event) {},
+    handleEvent: function handleEvent(event) {
+		var handlerName = this._handlerNames[event.type];
+		if(handlerName){
+			this[handlerName](event);
+		}
+    },
     onTouchStart: function onTouchStart() {},
     onTouchMove: function onTouchMove() {},
     onTouchEnd: function onTouchEnd() {},
