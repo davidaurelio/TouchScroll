@@ -352,15 +352,15 @@ function TouchScroll(scrollElement, options) {
 
     this._barMetrics = {
         /** @type {Object} Stores the offset height of the scrollbar "tracks". */
-        availLength: {e: 0, f: 0},
-        /** @type {Object} Stores the calculated sizes of the scroll indicators. */
-        sizes: {e: 0, f: 0},
+        availLength: {e: 0, f: 0}, //TODO: Check if necessary!
         /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
         endSize: 0,
         /** @type {Object} Stores the maximum offset for each scroll indicator. */
         maxOffsets: {e: 0, f: 0},
         /** @type {Object} Stores the ratio of scroll layer and scroll indicator offsets. */
-        offsetRatios: {e: 0, f:0}
+        offsetRatios: {e: 0, f:0},
+        /** @type {Object} Stores the calculated sizes of the scroll indicators. */
+        sizes: {e: 0, f: 0}
     };
 
     this._initDom(useScrollbars);
