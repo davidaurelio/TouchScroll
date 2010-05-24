@@ -359,6 +359,9 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether the scroll threshold has been exceeded. */
     this._scrollBegan = false;
 
+    /** @type {WebKitCSSMatrix} The current scroll offset. Not valid while flicking. */
+    this._scrollOffset = new WebKitCSSMatrix();
+
     this._initDom(useScrollbars);
 }
 
@@ -534,6 +537,32 @@ TouchScroll.prototype = {
     },
 
     /**
+     * Gets the current offset from the scrolling layers.
+     *
+     * @param {Boolean} round Whether to round the offfset to whole pixels.
+     * @returns {WebKitCSSMatrix} This is a reference to {@link _scrollOffset}
+     */
+    _determineOffset: function _determineOffset(round){
+        var isScrolling = this._isScrolling;
+        var scrollers = this._dom.scrollers;
+        var offset = this._scrollOffset;
+
+        for (var i = 0, axes = ["e", "f"], axis, offset; axis = axes[i++]; ) {
+            if (isScrolling[axis]) {
+                var offset = TouchScroll._getNodeOffset(scrollers[axis])[axis]
+                if(round){
+                    // This is a high performance rounding method:
+                    // Add 0.5 and then do a double binary inversion
+                    offset = ~~(offset + 0.5);
+                }
+                offset[axis] = offset;
+            }
+        }
+
+        return offset;
+    },
+
+    /**
      * Initializes the DOM of the scroller.
      *
      * Inserts additional elements for scrolling layers and scrollbars/indicators.
@@ -604,5 +633,28 @@ TouchScroll.prototype = {
         dom.scrollers.inner.appendChild(children);
 
         this.setupScroller();
+    },
+
+    /**
+     * Stops all running animations.
+     */
+    _stopAnimations: function _stopAnimations(){
+        var dom = this._dom;
+        var scrollers = this._dom.scrollers;
+        var bars = dom.bars;
+        var offset = this._determineOffset();
+
+        for (var axes = ["e", "f"], axis, style, matrix; axis = axis[i++]; ) {
+            style = scrollers[axis].style;
+            style.webkitAnimationDuration = 0;
+
+            if (bars) {
+                bars[axis].style.webkitAnimationDuration = 0;
+            }
+
+            matrix = new WebKitCSSMatrix();
+            matrix[axis] = offset[axis];
+            TouchScroll._setStyleOffset(style, matrix);
+        }
     }
 };
