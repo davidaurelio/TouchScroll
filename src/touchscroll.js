@@ -213,6 +213,16 @@ TouchScroll._styleSheet = (function() {
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
+ * A WebKitCSSMatrix instance to used to create new instances via its
+ * `translate` method. That is significantly faster than creating new instances
+ * manually.
+ *
+ * @private
+ * @type {WebKitCSSMatrix}
+ */
+TouchScroll._matrix = new WebKitCSSMatrix();
+
+/**
  * @private
  * @param {HTMLElement} node
  * @returns {WebKitCSSMatrix} A matrix representing the current css transform of a node.
@@ -227,16 +237,11 @@ TouchScroll._getNodeOffset = (function() {
 
     var reMatrix = /matrix\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/;
     return function _getNodeOffset(node) {
-        var matrix = new WebKitCSSMatrix();
-
         var computedStyle = window.getComputedStyle(node);
         var match = reMatrix.exec(computedStyle.webkitTransform);
-        if (match) {
-            matrix.e = match[1];
-            matrix.f = match[2];
-        }
-
-        return matrix;
+        return match ?
+               TouchScroll._matrix.translate(match[0], match[1], 0) :
+               TouchScroll._matrix.translate(0, 0, 0);
     }
 }());
 
@@ -431,7 +436,7 @@ TouchScroll.prototype = {
         var lastEvents = this._lastEvents;
         var lastEvent = lastEvents[1];
 
-        var scrollOffset = new WebKitCSSMatrix();
+        var scrollOffset = TouchScroll._matrix.translate(0, 0, 0);
         // inverse offsets because scrolling layer offsets are negative.
         scrollOffset.e = lastEvent.pageX - event.pageX;
         scrollOffset.f = lastEvent.pageY - event.pageY;
@@ -534,7 +539,7 @@ TouchScroll.prototype = {
                 style1 = parts[1].style;
                 size = barSizes[axis];
                 scale = size - endSize * 2;
-                offset = new WebKitCSSMatrix();
+                offset = TouchScroll._matrix.translate(0, 0, 0);
                 offset[axis] = endSize;
                 setOffset(style1, offset);
                 style1.webkitTransform += " scale(" + scale + ")";
