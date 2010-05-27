@@ -437,9 +437,8 @@ TouchScroll.prototype = {
         var lastEvent = lastEvents[1];
 
         var scrollOffset = TouchScroll._matrix.translate(0, 0, 0);
-        // inverse offsets because scrolling layer offsets are negative.
-        scrollOffset.e = lastEvent.pageX - event.pageX;
-        scrollOffset.f = lastEvent.pageY - event.pageY;
+        scrollOffset.e = event.pageX - lastEvent.pageX;
+        scrollOffset.f = event.pageY - lastEvent.pageY;
 
         var scrollBegan = this._scrollBegan;
 
@@ -464,6 +463,8 @@ TouchScroll.prototype = {
             return;
         }
         this._isTracking = false;
+
+        this._lastEvents[0] = this._lastEvents[1] = null;
     },
     scrollTo: function scrollTo() {},
 
@@ -665,9 +666,10 @@ TouchScroll.prototype = {
         }
 
         // register event listeners
-        scrollElement.addEventListener(TouchScroll._eventNames.start, this);
-        scrollElement.addEventListener(TouchScroll._eventNames.move, this);
-        scrollElement.addEventListener(TouchScroll._eventNames.stop, this);
+        var eventNames = TouchScroll._eventNames;
+        scrollElement.addEventListener(eventNames.start, this);
+        scrollElement.addEventListener(eventNames.move, this);
+        scrollElement.addEventListener(eventNames.end, this);
 
         // put original contents back into DOM
         dom.scrollers.inner.appendChild(children);
@@ -792,10 +794,16 @@ TouchScroll.prototype = {
 
         newOffset.e = newOffsetE;
         newOffset.f = newOffsetF;
+        this._scrollOffset = newOffset;
+
         var offsetE = newOffset.translate(0, 0, 0); // faster than creating a new WebKitCSSMatrix instance
         var offsetF = newOffset.translate(0, 0, 0);
         offsetE.f = offsetF.e = 0;
 
+        var setStyleOffset = TouchScroll._setStyleOffset;
+        var scrollers = this._dom.scrollers;
+        setStyleOffset(scrollers.e.style, offsetE);
+        setStyleOffset(scrollers.f.style, offsetF);
     },
 
     /**
