@@ -688,19 +688,108 @@ TouchScroll.prototype = {
         }
 
         var maxOffset = this._maxOffset;
+        var maxOffsetE = -maxOffset.e;
+        var maxOffsetF = -maxOffset.f;
         var scrollOffset = this._scrollOffset;
         var newOffset = scrollOffset.multiply(matrix);
+        var newOffsetE = newOffset.e;
+        var newOffsetF = newOffset.f;
+
+        var scrollbarSizeSubstractE = 0;
+        var scrollbarSizeSubstractF = 0;
 
         if (this.elastic) {
             var factor = this.config.elasticity.factorDrag;
+            var scrollOffsetE = scrollOffset.e;
+            var scrollOffsetF = scrollOffset.f;
 
             // whether the scroller was already beyond scroll bounds
-            var wasOutOfBoundsE = scrollOffset.e < -maxOffset.e || scrollOffset.e < 0;
-            var wasOutOfBoundsF = false;
+            var wasOutOfBoundsE = scrollOffsetE < maxOffsetE || scrollOffsetE > 0;
+            var wasOutOfBoundsF = scrollOffsetF < maxOffsetF || scrollOffsetF > 0;
+
+            var isOutOfBoundsE = false, isOutOfBoundsF = false;
+
+            if (wasOutOfBoundsE) {
+                // if out of scroll bounds, apply the elasticity factor
+                newOffsetE -= matrix.e * (1 - factor);
+            }
+            if (wasOutOfBoundsF) {
+                newOffsetF -= matrix.f * (1 - factor);
+            }
+
+            if (newOffsetE < maxOffsetE || newOffsetE > 0) {
+                isOutOfBoundsE = true;
+                scrollbarSizeSubstractE = newOffsetE >= 0 ?
+                                          newOffsetE : maxOffsetE - newOffsetE;
+            }
+            if (newOffsetF < maxOffsetF || newOffsetF > 0) {
+                isOutOfBoundsE = true;
+                scrollbarSizeSubstractF = newOffsetF >= 0 ?
+                                          newOffsetF : maxOffsetF - newOffsetF;
+            }
+
+            // whether the drag/scroll action went across scroller bounds
+            var crossingBoundsE = (!wasOutOfBoundsE || !isOutOfBoundsE) &&
+                                  (isOutOfBoundsE || isOutOfBoundsE);
+            var crossingBoundsF = (!wasOutOfBoundsF || !isOutOfBoundsF) &&
+                                  (isOutOfBoundsF || isOutOfBoundsF);
+
+            if (crossingBoundsE) {
+                /*
+                    If the drag went across scroll bounds, we need to apply a
+                    "mixed strategy": The part of the drag outside the bounds
+                    is mutliplicated by the elasticity factor.
+                */
+                if (scrollOffsetE > 0) {
+                    newOffsetE /= factor;
+                }
+                else if(newOffsetE > 0) {
+                    newOffsetE *= factor;
+                }
+                else if(scrollOffsetE < maxOffsetE) {
+                    newOffsetE += (maxOffsetE - scrollOffsetE) / factor;
+                }
+                else if(newOffsetE < maxOffsetE) {
+                    newOffsetE -= (maxOffsetE - newOffsetE) * factor;
+                }
+            }
+            if (crossingBoundsF) {
+                if (scrollOffsetF > 0) {
+                    newOffsetF /= factor;
+                }
+                else if (newOffsetF > 0) {
+                    newOffsetF *= factor;
+                }
+                else if (scrollOffsetF < maxOffsetF) {
+                    newOffsetF += (maxOffsetF - scrollOffsetF) / factor;
+                }
+                else if (newOffsetF < maxOffsetF) {
+                    newOffsetF -= (maxOffsetF - newOffsetF) * factor;
+                }
+            }
+        }
+        else { // not elastic
+            // Constrain scrolling to scroller bounds
+            if (newOffsetE < maxOffsetE) {
+                newOffsetE = maxOffsetE;
+            }
+            else if (newOffsetE > 0) {
+                newOffsetE = 0;
+            }
+
+            if (newOffsetF < maxOffsetF) {
+                newOffsetF = maxOffsetF;
+            }
+            else if (newOffsetF > 0) {
+                newOffsetF = 0;
+            }
         }
 
-        var newOffsetsE = newOffset.translate(0, 0, 0);
-        var newOffsetsF = newOffset.translate(0, 0, 0);
+        newOffset.e = newOffsetE;
+        newOffset.f = newOffsetF;
+        var offsetE = newOffset.translate(0, 0, 0); // faster than creating a new WebKitCSSMatrix instance
+        var offsetF = newOffset.translate(0, 0, 0);
+        offsetE.f = offsetF.e = 0;
 
     },
 
