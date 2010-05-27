@@ -242,23 +242,6 @@ TouchScroll._getNodeOffset = (function() {
 
 /**
  * @private
- * @param {TouchEvent|MouseEvent} event
- * @returns {WebKitCSSMatrix} A matrix representing the page offset of an event.
- */
-TouchScroll._getEventOffset = function _getEventOffset(event) {
-    if(event.touches && event.touches.length){
-        event = event.touches[0];
-    }
-
-    var matrix = new WebKitCSSMatrix();
-    matrix.e = event.pageX;
-    matrix.f = event.pageY;
-
-    return matrix;
-};
-
-/**
- * @private
  * @param {CSSStyleDeclaration} style
  * @param {WebKitCSSNatrix} matrix
  */
