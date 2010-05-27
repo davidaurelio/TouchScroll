@@ -193,7 +193,7 @@ TouchScroll._styleSheet = (function() {
     var doc = document;
     var parent = doc.querySelector("head") || doc.documentElement;
     var styleNode = document.createElement("style");
-    parent.insertBefore(style, parent.firstChild);
+    parent.insertBefore(styleNode, parent.firstChild);
 
     for (var i = 0, sheet; sheet = doc.styleSheets[i]; i++) {
         if (styleNode == sheet.ownerNode) {
@@ -437,7 +437,7 @@ TouchScroll.prototype = {
         this._scrollBegan = false;
         this._stopAnimations();
 
-        this._lastEvents[1] = events;
+        this._lastEvents[1] = event;
     },
 
     onTouchMove: function onTouchMove() {
@@ -546,18 +546,18 @@ TouchScroll.prototype = {
 
             var endSize = barMetrics.endSize;
             var setOffset = TouchScroll._setStyleOffset;
-            for (var i = 0, axis, parts, style1, matrix, size, scale; (axis = axes[i++]); ){
+            for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ){
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
-                offset = new WebKitCSSMatrix();
                 size = barSizes[axis];
                 scale = size - endSize * 2;
-                matrix[axis] = endSize;
-                setOffset(style1, matrix)
+                offset = new WebKitCSSMatrix();
+                offset[axis] = endSize;
+                setOffset(style1, offset);
                 style1.webkitTransform += " scale(" + scale + ")";
 
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
-                matrix[axis] += scale - 1;
+                offset[axis] += scale - 1;
                 setOffset(parts[2].style, offset);
             };
         }
@@ -677,7 +677,9 @@ TouchScroll.prototype = {
         }
 
         // register event listeners
-        scrollElement.addEventListener(TouchScroll._events.start, this);
+        scrollElement.addEventListener(TouchScroll._eventNames.start, this);
+        scrollElement.addEventListener(TouchScroll._eventNames.move, this);
+        scrollElement.addEventListener(TouchScroll._eventNames.stop, this);
 
         // put original contents back into DOM
         dom.scrollers.inner.appendChild(children);
@@ -710,9 +712,8 @@ TouchScroll.prototype = {
             var factor = this.config.elasticity.factorDrag;
 
             // whether the scroller was already beyond scroll bounds
-            var wasOutOfBoundsE = currentOffset.e < scrollMin.e || currentOffset.e > 0;
+            var wasOutOfBoundsE = scrollOffset.e < -maxOffset.e || scrollOffset.e < 0;
             var wasOutOfBoundsF = false;
-
         }
 
         var newOffsetsE = newOffset.translate(0, 0, 0);
@@ -729,7 +730,7 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        for (var axes = ["e", "f"], axis, style, matrix; axis = axis[i++]; ) {
+        for (var axes = ["e", "f"], i = 0, axis, style, matrix; axis = axes[i++]; ) {
             style = scrollers[axis].style;
             style.webkitAnimationDuration = 0;
 
