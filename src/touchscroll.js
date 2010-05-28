@@ -117,7 +117,7 @@ TouchScroll.config = {
  * @type {Boolean} Whether touch events are supported by the user agent.
  * @private
  */
-TouchScroll._hasTouchSupport = (function(){
+TouchScroll._hasTouchSupport = (function() {
     if ("createTouch" in document) { // True on the iPhone
         return true;
     }
@@ -138,7 +138,7 @@ TouchScroll._hasTouchSupport = (function(){
  * @type {Boolean}
  * @private
  */
-TouchScroll._parsesMatrixCorrectly = (function(){
+TouchScroll._parsesMatrixCorrectly = (function() {
     var m = new WebKitCSSMatrix("matrix(1, 0, 0, 1, -20, -30)");
     return m.e == -20 && m.f == -30;
 }());
@@ -149,7 +149,7 @@ TouchScroll._parsesMatrixCorrectly = (function(){
  * @type {Number} Android version number or `null`.
  * @private
  */
-TouchScroll._android = (function(){
+TouchScroll._android = (function() {
     var match = navigator.userAgent.match(/Android\s+(\d+(?:\.\d+)?)/);
     return match && parseFloat(match[1]);
 }());
@@ -195,7 +195,7 @@ TouchScroll._styleSheet = (function() {
     var styleNode = document.createElement("style");
     parent.insertBefore(styleNode, parent.firstChild);
 
-    for (var i = 0, sheet; sheet = doc.styleSheets[i]; i++) {
+    for (var i = 0, sheet; (sheet = doc.styleSheets[i]); i++) {
         if (styleNode == sheet.ownerNode) {
             return sheet; // return the newly created stylesheet
         }
@@ -242,7 +242,7 @@ TouchScroll._getNodeOffset = (function() {
         return match ?
                TouchScroll._matrix.translate(match[0], match[1], 0) :
                TouchScroll._matrix.translate(0, 0, 0);
-    }
+    };
 }());
 
 /**
@@ -250,9 +250,9 @@ TouchScroll._getNodeOffset = (function() {
  * @param {CSSStyleDeclaration} style
  * @param {WebKitCSSNatrix} matrix
  */
-TouchScroll._setStyleOffset = function _setStyleOffset(style, matrix){
+TouchScroll._setStyleOffset = function _setStyleOffset(style, matrix) {
     style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-}
+};
 
 /**
  * @private
@@ -313,7 +313,7 @@ function TouchScroll(scrollElement, options) {
     this._dom = {
         /** @type {HTMLElement} A reference to the outer/main DOM node. */
         outer: scrollElement
-    }
+    };
 
     /** @type {Object} Holds references to animation keyframes */
     this._animations = {
@@ -411,7 +411,7 @@ TouchScroll.prototype = {
      */
     handleEvent: function handleEvent(event) {
         var handlerName = this._handlerNames[event.type];
-        if(handlerName){
+        if (handlerName) {
             this[handlerName](event);
         }
     },
@@ -428,7 +428,7 @@ TouchScroll.prototype = {
         this._lastEvents[1] = event;
     },
 
-    onTouchMove: function onTouchMove() {
+    onTouchMove: function onTouchMove(event) {
         if (!this._isTracking) {
             return;
         }
@@ -508,9 +508,9 @@ TouchScroll.prototype = {
 
         // hide/show scrollbars
         var bars = dom.bars;
-        if(bars){
+        if (bars) {
             var axes = ["e", "f"];
-            for (var i = 0, axis, bar; (axis = axes[i++]); ){
+            for (var i = 0, axis, bar; (axis = axes[i++]); ) {
                 bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
                 if (isScrolling[axis]) {
@@ -520,7 +520,7 @@ TouchScroll.prototype = {
 
             // calculate and apply scroll indicator sizes
             var scrollHandleMinSize = this.config.scrollHandleMinSize;
-            var barMetrics = this._barMetrics
+            var barMetrics = this._barMetrics;
             var availLength = barMetrics.availLength;
             availLength.e = bars.e.offsetWidth;
             availLength.f = bars.f.offsetHeight;
@@ -535,7 +535,7 @@ TouchScroll.prototype = {
 
             var endSize = barMetrics.endSize;
             var setOffset = TouchScroll._setStyleOffset;
-            for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ){
+            for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ) {
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
                 size = barSizes[axis];
@@ -548,7 +548,7 @@ TouchScroll.prototype = {
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
                 offset[axis] += scale - 1;
                 setOffset(parts[2].style, offset);
-            };
+            }
         }
     },
 
@@ -581,15 +581,15 @@ TouchScroll.prototype = {
      * @param {Boolean} round Whether to round the offfset to whole pixels.
      * @returns {WebKitCSSMatrix} This is a reference to {@link _scrollOffset}
      */
-    _determineOffset: function _determineOffset(round){
+    _determineOffset: function _determineOffset(round) {
         var isScrolling = this._isScrolling;
         var scrollers = this._dom.scrollers;
         var offset = this._scrollOffset;
 
-        for (var i = 0, axes = ["e", "f"], axis, offset; axis = axes[i++]; ) {
+        for (var i = 0, axes = ["e", "f"], axis, offset; (axis = axes[i++]); ) {
             if (isScrolling[axis]) {
-                var offset = TouchScroll._getNodeOffset(scrollers[axis])[axis]
-                if(round){
+                var offset = TouchScroll._getNodeOffset(scrollers[axis])[axis];
+                if (round) {
                     // This is a high performance rounding method:
                     // Add 0.5 and then do a double binary inversion
                     offset = ~~(offset + 0.5);
@@ -623,7 +623,7 @@ TouchScroll.prototype = {
 
         // set innerHTML from template
         scrollElement.innerHTML = TouchScroll._scrollerTemplate;
-        if(scrollbars){
+        if (scrollbars) {
             scrollElement.innerHTML += TouchScroll._scrollbarTemplate;
         }
 
@@ -639,13 +639,13 @@ TouchScroll.prototype = {
         scrollers.e.style.webkitAnimationName = animations.scrollers.e.name;
         scrollers.f.style.webkitAnimationName = animations.scrollers.f.name;
 
-        if(scrollbars){
+        if (scrollbars) {
             var bars = dom.bars = {
                 outer: scrollElement.querySelector(".tsBars"),
                 parts: {}
             };
 
-            for (var i = 0, axes = ["e", "f"], axis, bar; (axis = axes[i++]); ){
+            for (var i = 0, axes = ["e", "f"], axis, bar; (axis = axes[i++]); ) {
                 var bar = bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
                 bars.parts[axis] = [
                     bar.querySelector(".tsBar1"),
@@ -655,7 +655,7 @@ TouchScroll.prototype = {
 
                 // add animation name
                 bar.style.webkitAnimationName = animations.bars[axis];
-            };
+            }
 
             var cs = window.getComputedStyle(bars.parts.e[0]);
             this._barMetrics.endSize =
@@ -750,13 +750,13 @@ TouchScroll.prototype = {
                 if (scrollOffsetE > 0) {
                     newOffsetE /= factor;
                 }
-                else if(newOffsetE > 0) {
+                else if (newOffsetE > 0) {
                     newOffsetE *= factor;
                 }
-                else if(scrollOffsetE < maxOffsetE) {
+                else if (scrollOffsetE < maxOffsetE) {
                     newOffsetE += (maxOffsetE - scrollOffsetE) / factor;
                 }
-                else if(newOffsetE < maxOffsetE) {
+                else if (newOffsetE < maxOffsetE) {
                     newOffsetE -= (maxOffsetE - newOffsetE) * factor;
                 }
             }
@@ -801,21 +801,26 @@ TouchScroll.prototype = {
         offsetE.f = offsetF.e = 0;
 
         var setStyleOffset = TouchScroll._setStyleOffset;
-        var scrollers = this._dom.scrollers;
+        var dom = this._dom;
+        var scrollers = dom.scrollers;
         setStyleOffset(scrollers.e.style, offsetE);
         setStyleOffset(scrollers.f.style, offsetF);
+
+        //TODO: add scrollbars
+        if (dom.bars) {
+        }
     },
 
     /**
      * Stops all running animations.
      */
-    _stopAnimations: function _stopAnimations(){
+    _stopAnimations: function _stopAnimations() {
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        for (var axes = ["e", "f"], i = 0, axis, style, matrix; axis = axes[i++]; ) {
+        for (var axes = ["e", "f"], i = 0, axis, style, matrix; (axis = axes[i++]); ) {
             style = scrollers[axis].style;
             style.webkitAnimationDuration = 0;
 
