@@ -458,40 +458,9 @@ TouchScroll.prototype = {
         this._lastEvents[0] = this._lastEvents[1] = null;
 
         // snap back to bounds
-        var scrollOffset = this._scrollOffset;
-        var maxOffset = this._maxOffset;
-        var scrollerAnimations = this._animations.scrollers;
-        var dom = this._dom;
-        var scrollers = dom.scrollers;
-        var snapBackConfig = this.config.snapBack;
-        var duration = snapBackConfig.defaultTime;
-        var timingFunc = snapBackConfig.timingFunc;
-        var setStyleOffset = this._setStyleOffset;
-        for (var axes = ["e", "f"], i = 0, axis; (axis = axes[i++]); ) {
-            var offset = scrollOffset[axis];
-            var minOffset = -maxOffset[axis];
-            var scrollerStyle = scrollers[axis].style;
-            if (offset >= minOffset && offset <= 0) {
-                continue;
-            }
-
-            var keyFrames = scrollerAnimations[axis];
-            var snapBackFrame = keyFrames[2];
-            var snapBackFrameStyle = snapBackFrame.style;
-            var endFrameStyle = keyFrames[3].style;
-
-            keyFrames[1].keyText = snapBackFrame.keyText = "0%";
-
-            var offsetFrom = new this._Matrix
-            var offsetTo = offsetFrom.translate(0, 0, 0);
-            offsetFrom[axis] = offset;
-            offsetTo[axis] = offset > 0 ? 0 : minOffset;
-            setStyleOffset(snapBackFrameStyle, offsetFrom, timingFunc);
-            setStyleOffset(endFrameStyle, offsetTo);
-            setStyleOffset(scrollerStyle, offsetTo);
-            scrollerStyle.webkitAnimationDuration = duration + "ms";
-        }
+        this.snapBack();
     },
+
     scrollTo: function scrollTo() {},
 
     /**
@@ -575,6 +544,51 @@ TouchScroll.prototype = {
                 offset[axis] += scale - 1;
                 setOffset(parts[2].style, offset);
             }
+        }
+    },
+
+    /**
+     * Scrolls back to the bounds of the scroller if the scroll position
+     * exceeds these.
+     *
+     * @param {String|null} [axis] Which axis to snap back. `null` snaps back
+     *                             both axes.
+     * @returns {Boolean} Whether the scroller was beyond regular bounds.
+     */
+    snapBack: function snapBack(axis) {
+        var axes = axis ? [axis] : ["e", "f"];
+        var scrollOffset = this._scrollOffset;
+        var maxOffset = this._maxOffset;
+        var scrollerAnimations = this._animations.scrollers;
+        var dom = this._dom;
+        var scrollers = dom.scrollers;
+        var snapBackConfig = this.config.snapBack;
+        var duration = snapBackConfig.defaultTime;
+        var timingFunc = snapBackConfig.timingFunc;
+        var setStyleOffset = this._setStyleOffset;
+        for (var i = 0, snapAxis; (snapAxis = axes[i++]); ) {
+            var offset = scrollOffset[snapAxis];
+            var minOffset = -maxOffset[snapAxis];
+            var scrollerStyle = scrollers[snapAxis].style;
+            if (offset >= minOffset && offset <= 0) {
+                continue;
+            }
+
+            var keyFrames = scrollerAnimations[snapAxis];
+            var snapBackFrame = keyFrames[2];
+            var snapBackFrameStyle = snapBackFrame.style;
+            var endFrameStyle = keyFrames[3].style;
+
+            keyFrames[1].keyText = snapBackFrame.keyText = "0%";
+
+            var offsetFrom = new this._Matrix
+            var offsetTo = offsetFrom.translate(0, 0, 0);
+            offsetFrom[snapAxis] = offset;
+            offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
+            setStyleOffset(snapBackFrameStyle, offsetFrom, timingFunc);
+            setStyleOffset(endFrameStyle, offsetTo);
+            setStyleOffset(scrollerStyle, offsetTo);
+            scrollerStyle.webkitAnimationDuration = duration + "ms";
         }
     },
 
