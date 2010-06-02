@@ -95,10 +95,10 @@ TouchScroll.config = {
          *
          * @type {Number[]}
          */
-        timingFunc: [0.4, 0, 1, 1],
+        timingFunc: [0, 0.25, 0, 1],
 
         /** @type {Number} Default snap back time. */
-        defaultTime: 400,
+        defaultTime: 750,
 
         /**
          * Whether the snap back effect always uses the default time or
