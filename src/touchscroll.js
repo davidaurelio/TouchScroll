@@ -111,7 +111,7 @@ TouchScroll.config = {
 };
 
 //
-//	FEATURE DETECTION
+// FEATURE DETECTION
 //
 /**
  * @type {Boolean} Whether touch events are supported by the user agent.
@@ -187,6 +187,7 @@ if (!TouchScroll._hasTouchSupport) { // overwrite event names
 
 /**
  * @private
+ * @static
  * @type {CSSStyleSheet}
  */
 TouchScroll._styleSheet = (function() {
@@ -212,73 +213,6 @@ TouchScroll._styleSheet = (function() {
     ".tsBar.active { display: block; }",
     ".tsPasteBoard { display: none; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
-
-/**
- * A WebKitCSSMatrix instance to used to create new instances via its
- * `translate` method. That is significantly faster than creating new instances
- * manually.
- *
- * @private
- * @type {WebKitCSSMatrix}
- */
-TouchScroll._matrix = new WebKitCSSMatrix();
-
-/**
- * @private
- * @param {HTMLElement} node
- * @returns {WebKitCSSMatrix} A matrix representing the current css transform of a node.
- */
-TouchScroll._getNodeOffset = (function() {
-    if (TouchScroll._parsesMatrixCorrectly) {
-        return function _getNodeOffset(node) {
-            var computedStyle = window.getComputedStyle(node);
-            return new WebKitCSSMatrix(computedStyle.webkitTransform);
-        };
-    }
-
-    var reMatrix = /matrix\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/;
-    return function _getNodeOffset(node) {
-        var computedStyle = window.getComputedStyle(node);
-        var match = reMatrix.exec(computedStyle.webkitTransform);
-        return match ?
-               TouchScroll._matrix.translate(match[0], match[1], 0) :
-               TouchScroll._matrix.translate(0, 0, 0);
-    };
-}());
-
-/**
- * @private
- * @param {CSSStyleDeclaration} style
- * @param {WebKitCSSNatrix} matrix
- */
-TouchScroll._setStyleOffset = function _setStyleOffset(style, matrix) {
-    style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-};
-
-/**
- * @private
- * @type {String} HTML for TouchScroll instances.
- */
-TouchScroll._scrollerTemplate = '<div><div class="tsInner"></div></div>';
-
-/**
- * @private
- * @type {String} HTML for scrollbars. Used on instances with scrollbars.
- */
-TouchScroll._scrollbarTemplate = [
-    '<div class="tsBars">',
-        '<div class="tsBar tsBarE">',
-            '<div class="tsBar1"></div>',
-            '<div class="tsBar2"></div>',
-            '<div class="tsBar3"></div>',
-        '</div>',
-        '<div class="tsBar tsBarF">',
-            '<div class="tsBar1"></div>',
-            '<div class="tsBar2"></div>',
-            '<div class="tsBar3"></div>',
-        '</div>',
-    '</div>'
-].join("\n");
 
 /**
  * @class
@@ -360,6 +294,8 @@ function TouchScroll(scrollElement, options) {
 TouchScroll.prototype = {
     config: TouchScroll.config,
 
+    _eventNames: TouchScroll._eventNames,
+
     /**
      * @private
      * @static
@@ -376,11 +312,47 @@ TouchScroll.prototype = {
     },
 
     /**
+     * The CSSMatrix constructor to use. Defaults to WebKitCSSMatrix.
+     *
+     * @static
+     * @private
+     * @type {Function}
+     */
+    _Matrix: WebKitCSSMatrix,
+
+    /**
      * @private
      * @static
      * @type {Number} The number of created keyframes rules.
      */
     _numKeyframeRules: 0,
+
+    /**
+    * @private
+    * @static
+    * @type {String} HTML for TouchScroll instances.
+    */
+   _scrollerTemplate: '<div><div class="tsInner"></div><div class="tsPasteBoard"></div></div>',
+
+   /**
+    * @private
+    * @static
+    * @type {String} HTML for scrollbars. Used on instances with scrollbars.
+    */
+   _scrollbarTemplate : [
+            '<div class="tsBars">',
+                '<div class="tsBar tsBarE">',
+                    '<div class="tsBar1"></div>',
+                    '<div class="tsBar2"></div>',
+                    '<div class="tsBar3"></div>',
+                '</div>',
+                '<div class="tsBar tsBarF">',
+                    '<div class="tsBar1"></div>',
+                    '<div class="tsBar2"></div>',
+                    '<div class="tsBar3"></div>',
+                '</div>',
+            '</div>'
+        ].join("\n"),
 
     _styleSheet: TouchScroll._styleSheet,
 
@@ -426,7 +398,12 @@ TouchScroll.prototype = {
         this._scrollBegan = false;
         this._stopAnimations();
 
-        this._lastEvents[1] = event;
+        event = event.touches && event.touches.length ? event.touches[0] : event;
+        this._lastEvents[1] = {
+            pageX: event.pageX,
+            pageY: event.pageY,
+            timeStamp: event.timeStamp
+        };
     },
 
     onTouchMove: function onTouchMove(event) {
@@ -583,13 +560,13 @@ TouchScroll.prototype = {
             ));
 
             var endSize = barMetrics.endSize;
-            var setOffset = TouchScroll._setStyleOffset;
+            var setOffset = this._setStyleOffset;
             for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ) {
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
                 size = barSizes[axis];
                 scale = size - endSize * 2;
-                offset = TouchScroll._matrix.translate(0, 0, 0);
+                offset = new this._Matrix();
                 offset[axis] = endSize;
                 setOffset(style1, offset);
                 style1.webkitTransform += " scale(" + scale + ")";
@@ -637,18 +614,44 @@ TouchScroll.prototype = {
 
         for (var i = 0, axes = ["e", "f"], axis, offset; (axis = axes[i++]); ) {
             if (isScrolling[axis]) {
-                var offset = TouchScroll._getNodeOffset(scrollers[axis])[axis];
+                var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
                 if (round) {
                     // This is a high performance rounding method:
                     // Add 0.5 and then do a double binary inversion
-                    offset = ~~(offset + 0.5);
+                    axisOffset = ~~(axisOffset + 0.5);
                 }
-                offset[axis] = offset;
+                offset[axis] = axisOffset;
             }
         }
 
         return offset;
     },
+
+    /**
+     * @private
+     * @param {HTMLElement} node
+     * @returns {WebKitCSSMatrix} A matrix representing the current css transform of a node.
+     */
+    _getNodeOffset: (function() {
+        if (TouchScroll._parsesMatrixCorrectly) {
+            return function _getNodeOffset(node) {
+                var computedStyle = window.getComputedStyle(node);
+                return new WebKitCSSMatrix(computedStyle.webkitTransform);
+            };
+        }
+
+        var reMatrix = /matrix\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*\,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/;
+        return function _getNodeOffset(node) {
+            var computedStyle = window.getComputedStyle(node);
+            var match = reMatrix.exec(computedStyle.webkitTransform);
+            var matrix = new this._Matrix();
+            if (match) {
+                matrix.e = match[0];
+                matrix.f = match[1];
+            }
+            return matrix;
+        };
+    }()),
 
     /**
      * Initializes the DOM of the scroller.
@@ -671,9 +674,9 @@ TouchScroll.prototype = {
         }
 
         // set innerHTML from template
-        scrollElement.innerHTML = TouchScroll._scrollerTemplate;
+        scrollElement.innerHTML = this._scrollerTemplate;
         if (scrollbars) {
-            scrollElement.innerHTML += TouchScroll._scrollbarTemplate;
+            scrollElement.innerHTML += this._scrollbarTemplate;
         }
 
         // setup references to scroller HTML nodes
@@ -717,7 +720,7 @@ TouchScroll.prototype = {
         }
 
         // register event listeners
-        var eventNames = TouchScroll._eventNames;
+        var eventNames = this._eventNames;
         scrollElement.addEventListener(eventNames.start, this);
         scrollElement.addEventListener(eventNames.move, this);
         scrollElement.addEventListener(eventNames.end, this);
@@ -851,7 +854,7 @@ TouchScroll.prototype = {
         var offsetF = newOffset.translate(0, 0, 0);
         offsetE.f = offsetF.e = 0;
 
-        var setStyleOffset = TouchScroll._setStyleOffset;
+        var setStyleOffset = this._setStyleOffset;
         var dom = this._dom;
         var scrollers = dom.scrollers;
         setStyleOffset(scrollers.e.style, offsetE);
@@ -859,6 +862,30 @@ TouchScroll.prototype = {
 
         //TODO: add scrollbars
         if (dom.bars) {
+        }
+    },
+
+    /**
+     * @private
+     * @static
+     * @param {CSSStyleDeclaration} style
+     * @param {WebKitCSSNatrix} matrix
+     * @param {Array} [timingFunc] Control points for a "cubic-bezier" declaration.
+     *      If the duration parameter is given, this is regarded as transition
+     *      timing function, defaults to animation timing function.
+     * @param {Number} [duration] Miliseconds
+     */
+    _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration) {
+        style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
+        if (timingFunc) {
+            var property = "webkit"
+            property += duration == null ? "Animation" : "Transition";
+            property += "TimingFunction";
+            style[property] = "cubic-bezier(" + timingFunc.join(",") + ")";
+
+            if (duration != null) {
+                style.webkitTransitionDuration = duration + "ms";
+            }
         }
     },
 
@@ -881,7 +908,7 @@ TouchScroll.prototype = {
 
             matrix = new WebKitCSSMatrix();
             matrix[axis] = offset[axis];
-            TouchScroll._setStyleOffset(style, matrix);
+            this._setStyleOffset(style, matrix);
         }
     }
 };
