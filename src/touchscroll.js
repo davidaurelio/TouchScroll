@@ -434,12 +434,17 @@ TouchScroll.prototype = {
             return;
         }
 
+        event.preventDefault();
+
         var lastEvents = this._lastEvents;
         var lastEvent = lastEvents[1];
+        var touch = event.touches && event.touches.length ? event.touches[0] : event;
+        var pageX = touch.pageX;
+        var pageY = touch.pageY;
 
-        var scrollOffset = TouchScroll._matrix.translate(0, 0, 0);
-        scrollOffset.e = event.pageX - lastEvent.pageX;
-        scrollOffset.f = event.pageY - lastEvent.pageY;
+        var scrollOffset = new this._Matrix();
+        scrollOffset.e = pageX - lastEvent.pageX;
+        scrollOffset.f = pageY - lastEvent.pageY;
 
         var scrollBegan = this._scrollBegan;
 
@@ -450,13 +455,21 @@ TouchScroll.prototype = {
                 threshold >= -scrollOffset.e ||
                 threshold >= scrollOffset.f ||
                 threshold >= -scrollOffset.f;
+            if(scrollBegan){
+                //this._dom.pasteBoard.innerHTML = '<a href="' + event.timeStamp + '">&nbsp;</a>';
+            }
         }
 
         if (scrollBegan) {
             this._scrollBy(scrollOffset);
             lastEvents[0] = lastEvent;
-            lastEvents[1] = event;
+            lastEvents[1] = {
+                pageX: pageX,
+                pageY: pageY,
+                timeStamp: event.timeStamp
+            };
         }
+
     },
 
     onTouchEnd: function onTouchEnd() {
@@ -466,6 +479,41 @@ TouchScroll.prototype = {
         this._isTracking = false;
 
         this._lastEvents[0] = this._lastEvents[1] = null;
+
+        // snap back to bounds
+        var scrollOffset = this._scrollOffset;
+        var maxOffset = this._maxOffset;
+        var scrollerAnimations = this._animations.scrollers;
+        var dom = this._dom;
+        var scrollers = dom.scrollers;
+        var snapBackConfig = this.config.snapBack;
+        var duration = snapBackConfig.defaultTime;
+        var timingFunc = snapBackConfig.timingFunc;
+        var setStyleOffset = this._setStyleOffset;
+        for (var axes = ["e", "f"], i = 0, axis; (axis = axes[i++]); ) {
+            var offset = scrollOffset[axis];
+            var minOffset = -maxOffset[axis];
+            var scrollerStyle = scrollers[axis].style;
+            if (offset >= minOffset && offset <= 0) {
+                continue;
+            }
+
+            var keyFrames = scrollerAnimations[axis];
+            var snapBackFrame = keyFrames[2];
+            var snapBackFrameStyle = snapBackFrame.style;
+            var endFrameStyle = keyFrames[3].style;
+
+            keyFrames[1].keyText = snapBackFrame.keyText = "0%";
+
+            var offsetFrom = new this._Matrix
+            var offsetTo = offsetFrom.translate(0, 0, 0);
+            offsetFrom[axis] = offset;
+            offsetTo[axis] = offset > 0 ? 0 : minOffset;
+            setStyleOffset(snapBackFrameStyle, offsetFrom, timingFunc);
+            setStyleOffset(endFrameStyle, offsetTo);
+            setStyleOffset(scrollerStyle, offsetTo);
+            scrollerStyle.webkitAnimationDuration = duration + "ms";
+        }
     },
     scrollTo: function scrollTo() {},
 
@@ -562,7 +610,7 @@ TouchScroll.prototype = {
      */
     _createKeyframes: function _createKeyframes() {
         var sheet = this._styleSheet, i = sheet.length;
-        var name = "touchScrollAnimation-" + this._numKeyframeRules++;
+        var name = "touchScrollAnimation-" + this.__proto__._numKeyframeRules++;
         i = sheet.insertRule("@-webkit-keyframes " + name + " {0%{} 33%{} 66%{} to{}}", i);
         var keyframes = sheet.cssRules[i];
         var frameRefs = [
@@ -635,6 +683,8 @@ TouchScroll.prototype = {
         scrollers.e = scrollers.inner.parentNode;
         scrollers.f = scrollers.inner;
 
+        dom.pasteBoard = scrollElement.querySelector(".tsPasteBoard");
+
         // add animation names
         var animations = this._animations;
         scrollers.e.style.webkitAnimationName = animations.scrollers.e.name;
@@ -681,8 +731,8 @@ TouchScroll.prototype = {
     /**
      * Scrolls by applying a transform matrix to the scroll layers.
      *
-	 * As this method is called for every touchmove event, the code is rolled
-	 * out for both axes (leading to redundancies) to get maximum performance.
+     * As this method is called for every touchmove event, the code is rolled
+     * out for both axes (leading to redundancies) to get maximum performance.
      *
      * @param {WebKitCSSMatrix} matrix Holds the offsets to apply.
      */
