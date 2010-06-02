@@ -286,7 +286,7 @@ function TouchScroll(scrollElement, options) {
     this._scrollBegan = false;
 
     /** @type {WebKitCSSMatrix} The current scroll offset. Not valid while flicking. */
-    this._scrollOffset = new WebKitCSSMatrix();
+    this._scrollOffset = new this._Matrix();
 
     this._initDom(useScrollbars);
 }
@@ -636,7 +636,7 @@ TouchScroll.prototype = {
         if (TouchScroll._parsesMatrixCorrectly) {
             return function _getNodeOffset(node) {
                 var computedStyle = window.getComputedStyle(node);
-                return new WebKitCSSMatrix(computedStyle.webkitTransform);
+                return new this._Matrix(computedStyle.webkitTransform);
             };
         }
 
@@ -906,7 +906,7 @@ TouchScroll.prototype = {
                 bars[axis].style.webkitAnimationDuration = 0;
             }
 
-            matrix = new WebKitCSSMatrix();
+            matrix = new this._Matrix();
             matrix[axis] = offset[axis];
             this._setStyleOffset(style, matrix);
         }
