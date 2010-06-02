@@ -207,9 +207,10 @@ TouchScroll._styleSheet = (function() {
 [
     ".touchScroll { position: relative; }",
     ".tsBars { pointer-events: none; opacity: 0; -webkit-transition: opacity 250ms; }",
-    ".tsInner { float: left; min-width: 100%; -webkit-box-sizing: border-box; }",
+    ".tsInner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
     ".tsBar { display: none; }",
-    ".tsBar.active { display: block; }"
+    ".tsBar.active { display: block; }",
+    ".tsPasteBoard { display: none; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
