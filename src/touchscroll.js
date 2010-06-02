@@ -285,7 +285,7 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether the scroll threshold has been exceeded. */
     this._scrollBegan = false;
 
-    /** @type {WebKitCSSMatrix} The current scroll offset. Not valid while flicking. */
+    /** @type {CSSMatrix} The current scroll offset. Not valid while flicking. */
     this._scrollOffset = new this._Matrix();
 
     this._initDom(useScrollbars);
@@ -449,16 +449,43 @@ TouchScroll.prototype = {
 
     },
 
-    onTouchEnd: function onTouchEnd() {
+    onTouchEnd: function onTouchEnd(event) {
         if (!this._isTracking) {
             return;
         }
+
         this._isTracking = false;
 
-        this._lastEvents[0] = this._lastEvents[1] = null;
+        if (!this._scrollBegan) {
+            return;
+        }
 
-        // snap back to bounds
-        this.snapBack();
+        var configFlicking = this.config.flicking;
+        var lastEvents = this._lastEvents;
+        var event0 = lastEvents[0];
+        var event1 = lastEvents[1];
+        var lag = event.timeStamp - event1.timeStamp;
+        var moveX = event1.pageX - event0.pageX;
+        var moveY = event1.pageY - event0.pageY;
+        var moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
+        var moveDuration = event1.timeStamp - event0.timeStamp;
+        var moveSpeed = moveDistance / moveDuration;
+
+        if (lag <= configFlicking.triggerThreshold && moveSpeed >= configFlicking.minSpeed) {
+            var flick = this._computeFlick(moveSpeed);
+            var flickDuration = flick[0];
+            var flickDistance = flick[1];
+            var flickVector = new this._Matrix();
+            flickVector.e = moveX / moveDistance * flickDistance;
+            flickVector.f = moveY / moveDistance * flickDistance;
+            this._flick(flickDuration, flickVector);
+        }else{
+            // snap back to bounds
+            this.snapBack();
+        }
+
+        this._scrollBegan = false;
+        this._lastEvents[0] = this._lastEvents[1] = null;
     },
 
     scrollTo: function scrollTo() {},
@@ -593,6 +620,67 @@ TouchScroll.prototype = {
     },
 
     /**
+     * Computes the duration and the distance of a flick from a given initial
+     * speed.
+     *
+     * @param {Number} initialSpeed The initial speed of the flick in
+     *                              pixels per millisecond.
+     * @returns {Number[]} An array containing flick duration (in milliseconds)
+     *                     and flick distance (in pixels).
+     */
+    _computeFlick: function _computeFlick(initialSpeed) {
+        /*
+            The duration is computed as follows:
+
+            variables:
+                m = minimum speed before stopping = config.flicking.minSpeed
+                d = duration
+                s = speed = initialSpeed
+                f = friction per milisecond = config.flicking.friction
+
+            The minimum speed is computed as follows:
+                    m = s * f ^ d
+
+                // as the minimum speed is given and we need the duration we
+                // can solve the equation for d:
+            <=> d = log(m/s) / log(f)
+        */
+        var configFlicking = this.config.flicking;
+        var friction = configFlicking.friction;
+        var duration = Math.log(configFlicking.minSpeed / initialSpeed) /
+                       Math.log(friction);
+
+        duration = duration > 0 ? Math.round(duration) : 0;
+
+        /*
+            The amount of pixels to flick is the sum of the distance covered
+            every milisecond of the flicking duration.
+
+            Because the distance is decelerated by the friction factor, the
+            speed at a given time t is:
+
+                pixelsPerMilisecond * friction^t
+
+            and the distance covered is:
+
+                d = distance
+                s = initial speed = pixelsPerMilisecond
+                t = time = duration
+                f = friction per milisecond = config.flicking.friction
+
+                d = sum of s * f^n for n between 0 and t
+            <=> d = s * (sum of f^n for n between 0 and t)
+
+            which is a geometric series and thus can be simplified to:
+                d = s *  (1 - f^(d+1)) / (1 - f)
+        */
+        var factor = (1 - Math.pow(friction, duration + 1)) / (1 - friction);
+        var distance = initialSpeed * factor;
+
+        return [duration, distance];
+    },
+
+    /**
      * Creates a keyframes rule, appends it to the stylesheet, and returns an
      * array containg references to the single keyframes.
      *
@@ -619,7 +707,7 @@ TouchScroll.prototype = {
      * Gets the current offset from the scrolling layers.
      *
      * @param {Boolean} round Whether to round the offfset to whole pixels.
-     * @returns {WebKitCSSMatrix} This is a reference to {@link _scrollOffset}
+     * @returns {CSSMatrix} This is a reference to {@link _scrollOffset}
      */
     _determineOffset: function _determineOffset(round) {
         var isScrolling = this._isScrolling;
@@ -642,9 +730,19 @@ TouchScroll.prototype = {
     },
 
     /**
+     * Plays a flicking animation.
+     *
+     * @param {Number} duration The animation duration in milliseconds
+     * @param {CSSMatrix} vector The scroller offsets.
+     */
+    _flick: function _flick(duration, vector) {
+
+    },
+
+    /**
      * @private
      * @param {HTMLElement} node
-     * @returns {WebKitCSSMatrix} A matrix representing the current css transform of a node.
+     * @returns {CSSMatrix} A matrix representing the current css transform of a node.
      */
     _getNodeOffset: (function() {
         if (TouchScroll._parsesMatrixCorrectly) {
@@ -751,7 +849,7 @@ TouchScroll.prototype = {
      * As this method is called for every touchmove event, the code is rolled
      * out for both axes (leading to redundancies) to get maximum performance.
      *
-     * @param {WebKitCSSMatrix} matrix Holds the offsets to apply.
+     * @param {CSSMatrix} matrix Holds the offsets to apply.
      */
     _scrollBy: function _scrollBy(matrix) {
         var isScrolling = this._isScrolling;
