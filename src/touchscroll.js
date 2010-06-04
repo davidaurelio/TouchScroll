@@ -738,7 +738,144 @@ TouchScroll.prototype = {
      * @param {CSSMatrix} vector The scroller offsets.
      */
     _flick: function _flick(duration, vector) {
+        // local variables for everything to minimize lookups
+        var config = this.config;
+        var dom = this._dom;
+        var scrollers = dom.scrollers;
+        var animations = this._animations;
+        var scrollerAnimations = animations.scrollers;
+        var scrollOffset = this._scrollOffset;
 
+        var isScrolling = this._isScrolling;
+        var maxOffset = this._maxOffset;
+
+        var configFlicking = config.flicking;
+        var timingFuncPoints = configFlicking.timingFunc;
+        var timingFunc = new CubicBezier(timingFuncPoints[0],
+                                         timingFuncPoints[1],
+                                         timingFuncPoints[2],
+                                         timingFuncPoints[3]);
+        var epsilon = 1 / duration; // precision for bezier computations
+
+        var configSnapBack = config.snapBack;
+        var snapBackAlwaysDefaultTime = configSnapBack.alwaysDefaultTime;
+        var snapBackDefaultTime = configSnapBack.defaultTime;
+        var snapBackTimingFunc = configSnapBack.timingFunc;
+
+        var configElasticity = config.elasticity;
+        var bounceFactor = configElasticity.factorFlick;
+        var bounceMax = configElasticity.max;
+
+        var flickTarget = scrollOffset.multiply(vector);
+        var zeroMatrix = new this._Matrix();
+
+        var setStyleMatrix = this._setStyleOffset;
+
+        // flick for every axis
+        for (var i = 0, axes = ["e", "f"], axis; (axis = axes[i++]); ){
+            var axisVector = vector[axis];
+            if (!isScrolling[axis]) {
+                continue;
+            }
+            else if (!axisVector) {
+                this.snapBack(axis);
+                continue;
+            }
+
+            var axisTarget = flickTarget[axis];
+            var axisMin = -maxOffset[axis];
+            var fractionDistance = 1; // The fraction of the flick distance until crossing scroller bounds.
+
+            // compute distance fraction where flicking crosses the bounds of the scroller.
+            if (axisTarget < axisMin) {
+                fractionDistance = 1 - Math.max(Math.min((axisTarget - axisMin) / vector[axis], 1), 0);
+                axisTarget = axisMin;
+            }
+            else if (axisTarget > 0) {
+                fractionDistance = 1 - Math.max(Math.min((axisTarget - 0) / vector[axis], 1), 0);
+                axisTarget = 0;
+            }
+
+            var distanceFlick = fractionDistance * axisVector;
+            var distanceBounce = axisVector - distanceFlick;
+            var fractionDuration = fractionDistance;
+
+            // timing functions for flick/bounce
+            var timingFuncFlick, timingFuncBounce;
+            timingFuncFlick = timingFuncBounce = timingFuncPoints;
+
+            // calculate the timing function parts
+            if (fractionDistance !== 1 && fractionDistance !== 0) {
+                var t = timingFunc.getTforY(fractionDistance, epsilon);
+                var timingFuncParts = timingFunc.divideAtT(t);
+
+                fractionDuration = timingFunc.getPointForT(t).x;
+                var _tf0 = timingFuncParts[0];
+                var _tf1 = timingFuncParts[1];
+                timingFuncFlick = [
+                    _tf0._p1.x,
+                    _tf0._p1.y,
+                    _tf0._p2.x,
+                    _tf0._p2.y
+                ];
+                timingFuncBounce = [
+                    _tf1._p1.x,
+                    _tf1._p1.y,
+                    1 - snapBackTimingFunc[2],
+                    1 - snapBackTimingFunc[3]
+                ];
+            } else if (fractionDistance === 0) {
+                timingFuncBounce[2] = 1 - snapBackTimingFunc[2];
+                timingFuncBounce[3] = 1 - snapBackTimingFunc[3];
+            }
+
+            // durations
+            var durationFlick = fractionDuration * duration;
+            var durationBounce = this.elastic ? duration - durationFlick : 0;
+            var durationSnapBack = 0;
+
+            // calculate bounce
+            if (durationBounce) {
+                var factor = Math.min(bounceFactor,
+                                      bounceMax / Math.abs(distanceBounce));
+
+                console.log(fractionDuration, factor);
+                distanceBounce *= factor;
+                durationBounce *= factor;
+                durationSnapBack = snapBackAlwaysDefaultTime ?
+                                   snapBackDefaultTime : durationBounce;
+            }
+
+            var animationDuration = durationFlick + durationBounce + durationSnapBack;
+            var percentFlick = 100 * durationFlick / animationDuration + "%";
+            var percentBounce = 100 * (durationFlick + durationBounce) / animationDuration + "%";
+
+            // build animation
+            var scrollerStyle = scrollers[axis].style;
+            var keyFrames = scrollerAnimations[axis];
+
+            var fromMatrix = zeroMatrix.translate(0, 0, 0);
+            fromMatrix[axis] = scrollOffset[axis];
+            var flickMatrix = zeroMatrix.translate(0, 0, 0);
+            flickMatrix[axis] = axisTarget;
+            var bounceMatrix = flickMatrix.translate(0, 0, 0);
+            bounceMatrix[axis] += distanceBounce;
+
+            flickFrame = keyFrames[1];
+            bounceFrame = keyFrames[2];
+
+            flickFrame.keyText = percentFlick;
+            bounceFrame.keyText = percentBounce;
+            setStyleMatrix(keyFrames[0].style, fromMatrix, timingFuncFlick);
+            setStyleMatrix(flickFrame.style, flickMatrix, timingFuncBounce);
+            setStyleMatrix(bounceFrame.style, bounceMatrix, snapBackTimingFunc);
+            setStyleMatrix(keyFrames[3].style, flickMatrix);
+
+            scrollerStyle.webkitAnimationDuration = animationDuration + "ms";
+            setStyleMatrix(scrollerStyle, flickMatrix);
+            console.dir(flickFrame)
+
+        }
     },
 
     /**
