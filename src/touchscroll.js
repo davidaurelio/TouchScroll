@@ -460,6 +460,7 @@ TouchScroll.prototype = {
             return;
         }
 
+        // calculate flick
         var configFlicking = this.config.flicking;
         var lastEvents = this._lastEvents;
         var event0 = lastEvents[0];
@@ -479,7 +480,8 @@ TouchScroll.prototype = {
             flickVector.e = moveX / moveDistance * flickDistance;
             flickVector.f = moveY / moveDistance * flickDistance;
             this._flick(flickDuration, flickVector);
-        }else{
+        }
+        else {
             // snap back to bounds
             this.snapBack();
         }
