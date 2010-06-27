@@ -82,7 +82,7 @@ TouchScroll.config = {
         factorFlick: 0.2,
 
         /** @type {Number} Maximum bounce (in px) when flicking. */
-        max: 100
+        max: 200
     },
 
     /** @type {Object} Snap back configuration. */
@@ -490,7 +490,14 @@ TouchScroll.prototype = {
         this._lastEvents[0] = this._lastEvents[1] = null;
     },
 
-    scrollTo: function scrollTo() {},
+    scrollTo: function scrollTo(e, f, duration) {
+        var scrollOffset = this._scrollOffset;
+        var scrollMatrix = new this._Matrix();
+        scrollMatrix.e = -e - scrollOffset.e;
+        scrollMatrix.f = -f - scrollOffset.f ;
+
+        duration > 0 ? this._flick(duration, scrollMatrix) : this._scrollBy(scrollMatrix);
+    },
 
     /**
      * Sets up the scroller according to its metrics.
@@ -760,11 +767,11 @@ TouchScroll.prototype = {
         var configSnapBack = config.snapBack;
         var snapBackAlwaysDefaultTime = configSnapBack.alwaysDefaultTime;
         var snapBackDefaultTime = configSnapBack.defaultTime;
-        var snapBackTimingFunc = configSnapBack.timingFunc;
+        var configSnapBackTimingFunc = configSnapBack.timingFunc;
 
         var configElasticity = config.elasticity;
-        var bounceFactor = configElasticity.factorFlick;
-        var bounceMax = configElasticity.max;
+        var configBounceFactor = configElasticity.factorFlick;
+        var maxBounceLength = configElasticity.max;
 
         var flickTarget = scrollOffset.multiply(vector);
         var zeroMatrix = new this._Matrix();
@@ -773,108 +780,102 @@ TouchScroll.prototype = {
 
         // flick for every axis
         for (var i = 0, axes = ["e", "f"], axis; (axis = axes[i++]); ){
-            var axisVector = vector[axis];
+            var distance = vector[axis];
             if (!isScrolling[axis]) {
                 continue;
             }
-            else if (!axisVector) {
+            else if (!distance) {
                 this.snapBack(axis);
                 continue;
             }
-
-            var axisTarget = flickTarget[axis];
+            var targetFlick = flickTarget[axis];
             var axisMin = -maxOffset[axis];
-            var fractionDistance = 1; // The fraction of the flick distance until crossing scroller bounds.
+            var scrollFrom = scrollOffset[axis];
+
+            var distanceFlick = distance;
 
             // compute distance fraction where flicking crosses the bounds of the scroller.
-            if (axisTarget < axisMin) {
-                fractionDistance = 1 - Math.max(Math.min((axisTarget - axisMin) / vector[axis], 1), 0);
-                axisTarget = axisMin;
+            if (targetFlick < axisMin) {
+                distanceFlick = axisMin - scrollFrom;
+                targetFlick = axisMin;
             }
-            else if (axisTarget > 0) {
-                fractionDistance = 1 - Math.max(Math.min((axisTarget - 0) / vector[axis], 1), 0);
-                axisTarget = 0;
+            else if (targetFlick > 0) {
+                distanceFlick = 0 - scrollFrom;
+                targetFlick = 0;
             }
+            var distanceBounce = distance - distanceFlick;
 
-            var distanceFlick = fractionDistance * axisVector;
-            var distanceBounce = axisVector - distanceFlick;
-            var fractionDuration = fractionDistance;
-
-            // timing functions for flick/bounce
-            var timingFuncFlick, timingFuncBounce;
-            timingFuncFlick = timingFuncBounce = timingFuncPoints;
-
-            // calculate the timing function parts
-            if (fractionDistance !== 1 && fractionDistance !== 0) {
-                var t = timingFunc.getTforY(fractionDistance, epsilon);
-                var timingFuncParts = timingFunc.divideAtT(t);
-
-                fractionDuration = timingFunc.getPointForT(t).x;
-                var _tf0 = timingFuncParts[0];
-                var _tf1 = timingFuncParts[1];
-                timingFuncFlick = [
-                    _tf0._p1.x,
-                    _tf0._p1.y,
-                    _tf0._p2.x,
-                    _tf0._p2.y
-                ];
-                timingFuncBounce = [
-                    _tf1._p1.x,
-                    _tf1._p1.y,
-                    1 - snapBackTimingFunc[2],
-                    1 - snapBackTimingFunc[3]
-                ];
-            } else if (fractionDistance === 0) {
-                timingFuncBounce[2] = 1 - snapBackTimingFunc[2];
-                timingFuncBounce[3] = 1 - snapBackTimingFunc[3];
+            // calculate timing functions
+            var t = timingFunc.getTforY(distanceFlick / distance, epsilon);
+            if (t < 0) { // already beyond scroller bounds
+                t = 0;
+                distanceBounce -= distanceFlick;
             }
 
-            // durations
-            var durationFlick = fractionDuration * duration;
-            var durationBounce = this.elastic ? duration - durationFlick : 0;
+            var bezierCurves = timingFunc.divideAtT(t);
+            var timingFuncFlick = bezierCurves[0];
+            var timingFuncBounce = timingFuncFlick;
+            var timingFuncSnapBack = timingFuncFlick;
+
+            var durationFlick = duration * timingFunc.getPointForT(t).x;
+            var durationBounce = duration - durationFlick;
             var durationSnapBack = 0;
 
-            // calculate bounce
-            if (durationBounce) {
-                var factor = Math.min(bounceFactor,
-                                      bounceMax / Math.abs(distanceBounce));
 
-                console.log(fractionDuration, factor);
-                distanceBounce *= factor;
-                durationBounce *= factor;
-                durationSnapBack = snapBackAlwaysDefaultTime ?
+            if (distanceFlick !== distance && this.elastic) {
+                //durationBounce *= configBounceFactor;
+                //distanceBounce *= configBounceFactor;
+                //
+                //// limit the bounce to the configured maximum
+                //if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
+                //    var sign = distanceBounce < 0 ? -1 : 1;
+                //    durationBounce *=  maxBounceLength / distanceBounce * sign;
+                //    distanceBounce = maxBounceLength * sign;
+                //}
+
+                // overwrite control points to achieve a smooth transition between flick and bounce
+                timingFuncBounce = bezierCurves[1];
+                timingFuncSnapBack = configSnapBackTimingFunc;
+
+                durationSnapBack = durationBounce !== 0 && snapBackAlwaysDefaultTime ?
                                    snapBackDefaultTime : durationBounce;
             }
 
             var animationDuration = durationFlick + durationBounce + durationSnapBack;
-            var percentFlick = 100 * durationFlick / animationDuration + "%";
-            var percentBounce = 100 * (durationFlick + durationBounce) / animationDuration + "%";
 
-            // build animation
-            var scrollerStyle = scrollers[axis].style;
+            console.warn(durationFlick, durationBounce, durationSnapBack, animationDuration);
+            console.log(distanceFlick, distanceBounce);
+
+            /*
+                Assemble animation
+            */
             var keyFrames = scrollerAnimations[axis];
+            var flickEndFrame = keyFrames[1];
+            var bounceEndFrame = keyFrames[2];
 
+            // set offsets to keyframes
             var fromMatrix = zeroMatrix.translate(0, 0, 0);
-            fromMatrix[axis] = scrollOffset[axis];
+            fromMatrix[axis] = scrollFrom;
             var flickMatrix = zeroMatrix.translate(0, 0, 0);
-            flickMatrix[axis] = axisTarget;
+            flickMatrix[axis] = ~~(targetFlick + 0.5); // fast round
             var bounceMatrix = flickMatrix.translate(0, 0, 0);
             bounceMatrix[axis] += distanceBounce;
 
-            flickFrame = keyFrames[1];
-            bounceFrame = keyFrames[2];
-
-            flickFrame.keyText = percentFlick;
-            bounceFrame.keyText = percentBounce;
             setStyleMatrix(keyFrames[0].style, fromMatrix, timingFuncFlick);
-            setStyleMatrix(flickFrame.style, flickMatrix, timingFuncBounce);
-            setStyleMatrix(bounceFrame.style, bounceMatrix, snapBackTimingFunc);
+            setStyleMatrix(flickEndFrame.style, flickMatrix, timingFuncBounce);
+            setStyleMatrix(bounceEndFrame.style, bounceMatrix, timingFuncSnapBack);
             setStyleMatrix(keyFrames[3].style, flickMatrix);
 
+            // set keyframe percents
+            flickEndFrame.keyText = 100 * durationFlick / animationDuration + "%";
+            bounceEndFrame.keyText = 100 * (durationFlick + durationBounce) / animationDuration + "%";
+
+            // start animation
+            var scrollerStyle = scrollers[axis].style;
+            scrollerStyle.webkitAnimationName = keyFrames.name;
             scrollerStyle.webkitAnimationDuration = animationDuration + "ms";
             setStyleMatrix(scrollerStyle, flickMatrix);
-            console.dir(flickFrame)
-
+            console.log(TouchScroll.prototype._styleSheet.cssRules[14].cssText);
         }
     },
 
@@ -939,11 +940,6 @@ TouchScroll.prototype = {
 
         dom.pasteBoard = scrollElement.querySelector(".tsPasteBoard");
 
-        // add animation names
-        var animations = this._animations;
-        scrollers.e.style.webkitAnimationName = animations.scrollers.e.name;
-        scrollers.f.style.webkitAnimationName = animations.scrollers.f.name;
-
         if (scrollbars) {
             var bars = dom.bars = {
                 outer: scrollElement.querySelector(".tsBars"),
@@ -957,9 +953,6 @@ TouchScroll.prototype = {
                     bar.querySelector(".tsBar2"),
                     bar.querySelector(".tsBar3")
                 ];
-
-                // add animation name
-                bar.style.webkitAnimationName = animations.bars[axis];
             }
 
             var cs = window.getComputedStyle(bars.parts.e[0]);
@@ -1121,7 +1114,7 @@ TouchScroll.prototype = {
      * @static
      * @param {CSSStyleDeclaration} style
      * @param {WebKitCSSNatrix} matrix
-     * @param {Array} [timingFunc] Control points for a "cubic-bezier" declaration.
+     * @param {Array|Object|String} [timingFunc] Control points for a "cubic-bezier" declaration.
      *      If the duration parameter is given, this is regarded as transition
      *      timing function, defaults to animation timing function.
      * @param {Number} [duration] Miliseconds
@@ -1132,7 +1125,7 @@ TouchScroll.prototype = {
             var property = "webkit"
             property += duration == null ? "Animation" : "Transition";
             property += "TimingFunction";
-            style[property] = "cubic-bezier(" + timingFunc.join(",") + ")";
+            style[property] = timingFunc.join ? "cubic-bezier(" + timingFunc.join(",") + ")" : timingFunc;
 
             if (duration != null) {
                 style.webkitTransitionDuration = duration + "ms";
@@ -1149,9 +1142,11 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        for (var axes = ["e", "f"], i = 0, axis, style, matrix; (axis = axes[i++]); ) {
-            style = scrollers[axis].style;
-            style.webkitAnimationDuration = 0;
+        for (var axes = ["e", "f"], i = 0, axis, scroller, style, matrix; (axis = axes[i++]); ) {
+            scroller = scrollers[axis];
+            style = scroller.style;
+            style.webkitAnimationName = "";
+            style.webkitAnimationDuration = "0";
 
             if (bars) {
                 bars[axis].style.webkitAnimationDuration = 0;

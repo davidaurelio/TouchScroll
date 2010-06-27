@@ -1,12 +1,12 @@
 .tsBars {
+	bottom: 0;
 	display: -webkit-box;
+	left: 0;
 	padding: 3px;
 	position: absolute;
-	width: 100%;
+	right: 0;
+	top: 0;
 	z-index: 2147483647;
-	-webkit-box-align: end;
-	-webkit-box-pack: end;
-	-webkit-box-sizing: border-box;
 }
 
 .tsBar {
