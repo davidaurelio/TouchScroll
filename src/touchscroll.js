@@ -823,15 +823,15 @@ TouchScroll.prototype = {
 
 
             if (distanceFlick !== distance && this.elastic) {
-                //durationBounce *= configBounceFactor;
-                //distanceBounce *= configBounceFactor;
-                //
-                //// limit the bounce to the configured maximum
-                //if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
-                //    var sign = distanceBounce < 0 ? -1 : 1;
-                //    durationBounce *=  maxBounceLength / distanceBounce * sign;
-                //    distanceBounce = maxBounceLength * sign;
-                //}
+                durationBounce *= configBounceFactor;
+                distanceBounce *= configBounceFactor;
+
+                // limit the bounce to the configured maximum
+                if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
+                    var sign = distanceBounce < 0 ? -1 : 1;
+                    durationBounce *=  maxBounceLength / distanceBounce * sign;
+                    distanceBounce = maxBounceLength * sign;
+                }
 
                 // overwrite control points to achieve a smooth transition between flick and bounce
                 timingFuncBounce = bezierCurves[1];
