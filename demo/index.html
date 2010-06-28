@@ -109,7 +109,7 @@
 <script src="../lib/css-beziers/src/css-beziers.js"></script>
 <script>
 (function(){
-	var scrollers = {};
+	var scrollers = window.scrollers = {};
 
 	function showScreen(screenId){
 		try{
@@ -192,6 +192,14 @@
 	}
 
 }())
+
+setTimeout(function(){
+	var s = window.scrollers.about;
+	s.scrollTo(0, 300);
+	setTimeout(function(){
+		s.scrollTo(0, -200, 2000)
+	}, 1000)
+}, 1000)
 </script>
 
 </body>
