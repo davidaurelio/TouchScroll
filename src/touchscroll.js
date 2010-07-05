@@ -696,17 +696,28 @@ TouchScroll.prototype = {
      * The array has a "name" property, containing the name of the
      * keyframes rule.
      */
-    _createKeyframes: function _createKeyframes() {
-        var sheet = this._styleSheet, i = sheet.length;
+    _createKeyframes: function _createKeyframes(numFrames) {
+        numFrames = parseInt(numFrames) || 3;
+        var sheet = this._styleSheet, rulePos = sheet.length;
         var name = "touchScrollAnimation-" + this.__proto__._numKeyframeRules++;
-        i = sheet.insertRule("@-webkit-keyframes " + name + " {0%{} 33%{} 66%{} to{}}", i);
-        var keyframes = sheet.cssRules[i];
-        var frameRefs = [
-            keyframes.findRule("0%"), // iPhone does not support finding keywords (from/to)
-            keyframes.findRule("33%"),
-            keyframes.findRule("66%"),
-            keyframes.findRule("100%")
-        ];
+        var rule = "@-webkit-keyframes " + name;
+
+        var interval = Math.floor(100 / (numFrames - 1));
+        var framePositions = [];
+        for (var i = 0; i < numFrames - 1; i++) {
+            framePositions[i] = i * interval;
+        }
+        framePositions[i] = 100;
+
+        rule += "{" + framePositions.map(function(pos) {
+            return pos + "% {}";
+        }).join(" ") + "}";
+
+        rulePos = sheet.insertRule(rule, rulePos);
+        var keyframes = sheet.cssRules[rulePos];
+        var frameRefs = framePositions.map(function (pos) {
+            return keyframes.findRule(pos + "%");
+        });
         frameRefs.name = name;
 
         return frameRefs;
@@ -837,8 +848,8 @@ TouchScroll.prototype = {
                 timingFuncBounce = bezierCurves[1];
                 timingFuncSnapBack = configSnapBackTimingFunc;
 
-                durationSnapBack = durationBounce !== 0 && snapBackAlwaysDefaultTime ?
-                                   snapBackDefaultTime : durationBounce;
+                //durationSnapBack = durationBounce !== 0 && snapBackAlwaysDefaultTime ?
+                //                   snapBackDefaultTime : durationBounce;
             }
 
             var animationDuration = durationFlick + durationBounce + durationSnapBack;
@@ -863,19 +874,20 @@ TouchScroll.prototype = {
 
             setStyleMatrix(keyFrames[0].style, fromMatrix, timingFuncFlick);
             setStyleMatrix(flickEndFrame.style, flickMatrix, timingFuncBounce);
-            setStyleMatrix(bounceEndFrame.style, bounceMatrix, timingFuncSnapBack);
-            setStyleMatrix(keyFrames[3].style, flickMatrix);
+            setStyleMatrix(bounceEndFrame.style, bounceMatrix, timingFuncBounce);
+            //setStyleMatrix(keyFrames[3].style, flickMatrix);
 
             // set keyframe percents
             flickEndFrame.keyText = 100 * durationFlick / animationDuration + "%";
-            bounceEndFrame.keyText = 100 * (durationFlick + durationBounce) / animationDuration + "%";
+            //bounceEndFrame.keyText = 100 * (durationFlick + durationBounce) / animationDuration + "%";
 
             // start animation
             var scrollerStyle = scrollers[axis].style;
             scrollerStyle.webkitAnimationName = keyFrames.name;
             scrollerStyle.webkitAnimationDuration = animationDuration + "ms";
-            setStyleMatrix(scrollerStyle, flickMatrix);
-            console.log(TouchScroll.prototype._styleSheet.cssRules[14].cssText);
+            setStyleMatrix(scrollerStyle, bounceMatrix);
+            console.log("duration", durationFlick, durationFlick / animationDuration, durationBounce / configBounceFactor, durationFlick + durationBounce / configBounceFactor, duration)
+            console.log(TouchScroll.prototype._styleSheet.cssRules[14].cssText, animationDuration);
         }
     },
 
