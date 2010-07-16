@@ -231,6 +231,14 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether to build and use scrollbars. */
     var useScrollbars = options.scrollbars == null ? true : !!options.scrollbars;
 
+    /**
+     * An array of timeout handles for queued animations and actions that have
+     * to be cancelled on animation stop.
+     *
+     * @type {Number[]}
+     */
+    this._scrollTimeouts = [];
+
     /** @type {Object} Holds scrollbar related metrics. */
     this._barMetrics = {
         /** @type {Object} Stores the offset height of the scrollbar "tracks". */
@@ -249,18 +257,6 @@ function TouchScroll(scrollElement, options) {
     this._dom = {
         /** @type {HTMLElement} A reference to the outer/main DOM node. */
         outer: scrollElement
-    };
-
-    /** @type {Object} Holds references to animation keyframes */
-    this._animations = {
-        scrollers: {
-            e: this._createKeyframes(),
-            f: this._createKeyframes()
-        },
-        bars: (useScrollbars ? {
-            e: this._createKeyframes(),
-            f: this._createKeyframes()
-        } : null)
     };
 
     /** @type {Object} Stores whether each axis is scrolling. */
@@ -321,14 +317,7 @@ TouchScroll.prototype = {
      */
     _Matrix: WebKitCSSMatrix,
 
-    /**
-     * @private
-     * @static
-     * @type {Number} The number of created keyframes rules.
-     */
-    _numKeyframeRules: 0,
-
-    /**
+   /**
     * @private
     * @static
     * @type {String} HTML for TouchScroll instances.
@@ -432,11 +421,13 @@ TouchScroll.prototype = {
         if (!scrollBegan) {
             var threshold = this.config.threshold;
             this._scrollBegan = scrollBegan =
-                threshold >= scrollOffset.e ||
-                threshold >= -scrollOffset.e ||
-                threshold >= scrollOffset.f ||
-                threshold >= -scrollOffset.f;
-            if(scrollBegan){
+                threshold <= scrollOffset.e ||
+                threshold <= -scrollOffset.e ||
+                threshold <= scrollOffset.f ||
+                threshold <= -scrollOffset.f;
+            if (scrollBegan) {
+                // catch pointer events with the scrollbar layer
+                this._dom.bars.outer.style.pointerEvents = "auto";
             }
         }
 
@@ -499,7 +490,12 @@ TouchScroll.prototype = {
         scrollMatrix.e = -e - scrollOffset.e;
         scrollMatrix.f = -f - scrollOffset.f ;
 
-        duration > 0 ? this._flick(duration, scrollMatrix) : this._scrollBy(scrollMatrix);
+        if (duration > 0) {
+            this._flick(duration, scrollMatrix)
+        }
+        else {
+            this._scrollBy(scrollMatrix);
+        }
     },
 
     /**
@@ -568,7 +564,6 @@ TouchScroll.prototype = {
             ));
 
             var endSize = barMetrics.endSize;
-            var setOffset = this._setStyleOffset;
             for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ) {
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
@@ -576,12 +571,12 @@ TouchScroll.prototype = {
                 scale = size - endSize * 2;
                 offset = new this._Matrix();
                 offset[axis] = endSize;
-                setOffset(style1, offset);
+                this._setStyleOffset(style1, offset);
                 style1.webkitTransform += " scale(" + scale + ")";
 
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
                 offset[axis] += scale - 1;
-                setOffset(parts[2].style, offset);
+                this._setStyleOffset(parts[2].style, offset);
             }
         }
     },
@@ -598,13 +593,11 @@ TouchScroll.prototype = {
         var axes = axis ? [axis] : ["e", "f"];
         var scrollOffset = this._scrollOffset;
         var maxOffset = this._maxOffset;
-        var scrollerAnimations = this._animations.scrollers;
         var dom = this._dom;
         var scrollers = dom.scrollers;
         var snapBackConfig = this.config.snapBack;
         var duration = snapBackConfig.defaultTime;
         var timingFunc = snapBackConfig.timingFunc;
-        var setStyleOffset = this._setStyleOffset;
         for (var i = 0, snapAxis; (snapAxis = axes[i++]); ) {
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
@@ -613,21 +606,15 @@ TouchScroll.prototype = {
                 continue;
             }
 
-            var keyFrames = scrollerAnimations[snapAxis];
-            var snapBackFrame = keyFrames[2];
-            var snapBackFrameStyle = snapBackFrame.style;
-            var endFrameStyle = keyFrames[3].style;
-
-            keyFrames[1].keyText = snapBackFrame.keyText = "0%";
-
-            var offsetFrom = new this._Matrix
-            var offsetTo = offsetFrom.translate(0, 0, 0);
-            offsetFrom[snapAxis] = offset;
+            var offsetTo = new this._Matrix
             offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
-            setStyleOffset(snapBackFrameStyle, offsetFrom, timingFunc);
-            setStyleOffset(endFrameStyle, offsetTo);
-            setStyleOffset(scrollerStyle, offsetTo);
-            scrollerStyle.webkitAnimationDuration = duration + "ms";
+            this._setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration, 0);
+
+            var scroller = this;
+            var timeouts = this._scrollTimeouts;
+            timeouts[timeouts.length] = setTimeout(function() {
+                scroller._endScroll();
+            }, duration);
         }
     },
 
@@ -693,40 +680,6 @@ TouchScroll.prototype = {
     },
 
     /**
-     * Creates a keyframes rule, appends it to the stylesheet, and returns an
-     * array containg references to the single keyframes.
-     *
-     * The array has a "name" property, containing the name of the
-     * keyframes rule.
-     */
-    _createKeyframes: function _createKeyframes(numFrames) {
-        numFrames = parseInt(numFrames) || 3;
-        var sheet = this._styleSheet, rulePos = sheet.length;
-        var name = "touchScrollAnimation-" + this.__proto__._numKeyframeRules++;
-        var rule = "@-webkit-keyframes " + name;
-
-        var interval = Math.floor(100 / (numFrames - 1));
-        var framePositions = [];
-        for (var i = 0; i < numFrames - 1; i++) {
-            framePositions[i] = i * interval;
-        }
-        framePositions[i] = 100;
-
-        rule += "{" + framePositions.map(function(pos) {
-            return pos + "% {}";
-        }).join(" ") + "}";
-
-        rulePos = sheet.insertRule(rule, rulePos);
-        var keyframes = sheet.cssRules[rulePos];
-        var frameRefs = framePositions.map(function (pos) {
-            return keyframes.findRule(pos + "%");
-        });
-        frameRefs.name = name;
-
-        return frameRefs;
-    },
-
-    /**
      * Gets the current offset from the scrolling layers.
      *
      * @param {Boolean} round Whether to round the offfset to whole pixels.
@@ -752,6 +705,14 @@ TouchScroll.prototype = {
         return offset;
     },
 
+
+    /**
+     * Does cleanup work after ending a scroll.
+     */
+    _endScroll: function _endScroll() {
+        this._dom.bars.outer.style.pointerEvents = "";
+    },
+
     /**
      * Plays a flicking animation.
      *
@@ -763,8 +724,6 @@ TouchScroll.prototype = {
         var config = this.config;
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        var animations = this._animations;
-        var scrollerAnimations = animations.scrollers;
         var scrollOffset = this._scrollOffset;
 
         var isScrolling = this._isScrolling;
@@ -790,7 +749,7 @@ TouchScroll.prototype = {
         var flickTarget = scrollOffset.multiply(vector);
         var zeroMatrix = new this._Matrix();
 
-        var setStyleMatrix = this._setStyleOffset;
+        var durations = [];
 
         // flick for every axis
         for (var i = 0, axes = ["e", "f"], axis; (axis = axes[i++]); ){
@@ -837,15 +796,15 @@ TouchScroll.prototype = {
 
 
             if (distanceFlick !== distance && this.elastic) {
-                durationBounce *= configBounceFactor;
-                distanceBounce *= configBounceFactor;
+                //durationBounce *= configBounceFactor;
+                //distanceBounce *= configBounceFactor;
 
                 // limit the bounce to the configured maximum
-                if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
-                    var sign = distanceBounce < 0 ? -1 : 1;
-                    durationBounce *=  maxBounceLength / distanceBounce * sign;
-                    distanceBounce = maxBounceLength * sign;
-                }
+                //if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
+                //    var sign = distanceBounce < 0 ? -1 : 1;
+                //    //durationBounce *=  maxBounceLength / distanceBounce * sign;
+                //    distanceBounce = maxBounceLength * sign;
+                //}
 
                 // overwrite control points to achieve a smooth transition between flick and bounce
                 timingFuncBounce = bezierCurves[1];
@@ -855,43 +814,41 @@ TouchScroll.prototype = {
                 //                   snapBackDefaultTime : durationBounce;
             }
 
-            var animationDuration = durationFlick + durationBounce + durationSnapBack;
-
-            console.warn(durationFlick, durationBounce, durationSnapBack, animationDuration);
-            console.log(distanceFlick, distanceBounce);
-
             /*
                 Assemble animation
             */
-            var keyFrames = scrollerAnimations[axis];
-            var flickEndFrame = keyFrames[1];
-            var bounceEndFrame = keyFrames[2];
-
-            // set offsets to keyframes
-            var fromMatrix = zeroMatrix.translate(0, 0, 0);
-            fromMatrix[axis] = scrollFrom;
+            // create matrixes for every step (flick, bounce, snap back == flick)
             var flickMatrix = zeroMatrix.translate(0, 0, 0);
             flickMatrix[axis] = ~~(targetFlick + 0.5); // fast round
             var bounceMatrix = flickMatrix.translate(0, 0, 0);
             bounceMatrix[axis] += distanceBounce;
 
-            setStyleMatrix(keyFrames[0].style, fromMatrix, timingFuncFlick);
-            setStyleMatrix(flickEndFrame.style, flickMatrix, timingFuncBounce);
-            setStyleMatrix(bounceEndFrame.style, bounceMatrix, timingFuncBounce);
-            //setStyleMatrix(keyFrames[3].style, flickMatrix);
-
-            // set keyframe percents
-            flickEndFrame.keyText = 100 * durationFlick / animationDuration + "%";
-            //bounceEndFrame.keyText = 100 * (durationFlick + durationBounce) / animationDuration + "%";
-
-            // start animation
+            // queue each transition
             var scrollerStyle = scrollers[axis].style;
-            scrollerStyle.webkitAnimationName = keyFrames.name;
-            scrollerStyle.webkitAnimationDuration = animationDuration + "ms";
-            setStyleMatrix(scrollerStyle, bounceMatrix);
-            console.log("duration", durationFlick, durationFlick / animationDuration, durationBounce / configBounceFactor, durationFlick + durationBounce / configBounceFactor, duration)
-            console.log(TouchScroll.prototype._styleSheet.cssRules[14].cssText, animationDuration);
+            this._setStyleOffset(scrollerStyle,
+                                 flickMatrix,
+                                 timingFuncFlick,
+                                 durationFlick,
+                                 0);
+            this._setStyleOffset(scrollerStyle,
+                                 bounceMatrix,
+                                 timingFuncBounce,
+                                 durationBounce,
+                                 durationFlick);
+            this._setStyleOffset(scrollerStyle,
+                                 flickMatrix,
+                                 timingFuncSnapBack,
+                                 durationSnapBack,
+                                 durationFlick + durationBounce);
+
+            durations[durations.length] = durationFlick + durationBounce + durationSnapBack;
         }
+
+        var scroller = this;
+        var timeouts = this._scrollTimeouts;
+        timeouts[timeouts.length] = setTimeout(function() {
+            scroller._endScroll();
+        }, Math.max.apply(Math, durations));
     },
 
     /**
@@ -1112,11 +1069,10 @@ TouchScroll.prototype = {
         var offsetF = newOffset.translate(0, 0, 0);
         offsetE.f = offsetF.e = 0;
 
-        var setStyleOffset = this._setStyleOffset;
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        setStyleOffset(scrollers.e.style, offsetE);
-        setStyleOffset(scrollers.f.style, offsetF);
+        this._setStyleOffset(scrollers.e.style, offsetE);
+        this._setStyleOffset(scrollers.f.style, offsetF);
 
         //TODO: add scrollbars
         if (dom.bars) {
@@ -1125,25 +1081,30 @@ TouchScroll.prototype = {
 
     /**
      * @private
-     * @static
      * @param {CSSStyleDeclaration} style
      * @param {WebKitCSSNatrix} matrix
      * @param {Array|Object|String} [timingFunc] Control points for a "cubic-bezier" declaration.
-     *      If the duration parameter is given, this is regarded as transition
-     *      timing function, defaults to animation timing function.
      * @param {Number} [duration] Miliseconds
+     * @param {Number} [delay] Miliseconds
      */
-    _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration) {
-        style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-        if (timingFunc) {
-            var property = "webkit"
-            property += duration == null ? "Animation" : "Transition";
-            property += "TimingFunction";
-            style[property] = timingFunc.join ? "cubic-bezier(" + timingFunc.join(",") + ")" : timingFunc;
+    _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration, delay) {
+        delay = delay || 0;
 
-            if (duration != null) {
-                style.webkitTransitionDuration = duration + "ms";
-            }
+        if (timingFunc) {
+            style.webkitTransitionTimingFunction =
+                timingFunc.join ?
+                "cubic-bezier(" + timingFunc.join(",") + ")" :
+                timingFunc;
+        }
+
+        var handle = setTimeout(function() {
+            style.webkitTransitionDuration = (duration || 0) + "ms";
+            style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
+        }, delay || 0);
+
+        if (delay) {
+            var timeouts = this._scrollTimeouts;
+            timeouts[timeouts.length] = handle;
         }
     },
 
@@ -1156,19 +1117,16 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        for (var axes = ["e", "f"], i = 0, axis, scroller, style, matrix; (axis = axes[i++]); ) {
-            scroller = scrollers[axis];
-            style = scroller.style;
-            style.webkitAnimationName = "";
-            style.webkitAnimationDuration = "0";
-
-            if (bars) {
-                bars[axis].style.webkitAnimationDuration = 0;
-            }
-
+        for (var axes = ["e", "f"], i = 0, axis, style, matrix; (axis = axes[i++]); ) {
+            style = scrollers[axis].style;
             matrix = new this._Matrix();
             matrix[axis] = offset[axis];
             this._setStyleOffset(style, matrix);
+        }
+
+        var timeouts = this._scrollTimeouts;
+        for (var i = 0, len = timeouts.length; i < len; i++) {
+            clearTimeout(timeouts[i]);
         }
     }
 };
