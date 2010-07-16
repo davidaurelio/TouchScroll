@@ -206,12 +206,13 @@ TouchScroll._styleSheet = (function() {
 }());
 
 [
-    ".touchScroll { position: relative; }",
-    ".tsBars { pointer-events: none; opacity: 0; -webkit-transition: opacity 250ms; }",
-    ".tsInner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
-    ".tsBar { display: none; }",
-    ".tsBar.active { display: block; }",
-    ".tsPasteBoard { display: none; }"
+    ".TouchScroll { position: relative; }",
+    ".-ts-layer { -webkit-transition-property: -webkit-transform }",
+    ".-ts-bars { bottom: 0; display: -webkit-box; left: 0; padding: 3px; pointer-events: none; position: absolute; " +
+        "opacity: 0;  right: 0; top: 0; z-index: 2147483647; -webkit-transition: opacity 250ms; }",
+    ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
+    ".-ts-bar { display: none; }",
+    ".-ts-bar.active { display: block; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
@@ -332,7 +333,12 @@ TouchScroll.prototype = {
     * @static
     * @type {String} HTML for TouchScroll instances.
     */
-   _scrollerTemplate: '<div><div class="tsInner"></div><div class="tsPasteBoard"></div></div>',
+   _scrollerTemplate: [
+            '<div class="-ts-layer">',
+                '<div class="-ts-layer -ts-inner"></div>',
+            '</div>',
+            '<div class="-ts-bars"></div>'
+        ].join(""),
 
    /**
     * @private
@@ -340,19 +346,17 @@ TouchScroll.prototype = {
     * @type {String} HTML for scrollbars. Used on instances with scrollbars.
     */
    _scrollbarTemplate : [
-            '<div class="tsBars">',
-                '<div class="tsBar tsBarE">',
-                    '<div class="tsBar1"></div>',
-                    '<div class="tsBar2"></div>',
-                    '<div class="tsBar3"></div>',
-                '</div>',
-                '<div class="tsBar tsBarF">',
-                    '<div class="tsBar1"></div>',
-                    '<div class="tsBar2"></div>',
-                    '<div class="tsBar3"></div>',
-                '</div>',
+            '<div class="-ts-bar -ts-bar-e">',
+                '<div class="-ts-bar-1"></div>',
+                '<div class="-ts-bar-2"></div>',
+                '<div class="-ts-bar-3"></div>',
+            '</div>',
+            '<div class="-ts-bar -ts-bar-f">',
+                '<div class="-ts-bar-1"></div>',
+                '<div class="-ts-bar-2"></div>',
+                '<div class="-ts-bar-3"></div>',
             '</div>'
-        ].join("\n"),
+        ].join(""),
 
     _styleSheet: TouchScroll._styleSheet,
 
@@ -433,7 +437,6 @@ TouchScroll.prototype = {
                 threshold >= scrollOffset.f ||
                 threshold >= -scrollOffset.f;
             if(scrollBegan){
-                //this._dom.pasteBoard.innerHTML = '<a href="' + event.timeStamp + '">&nbsp;</a>';
             }
         }
 
@@ -929,7 +932,7 @@ TouchScroll.prototype = {
         var dom = this._dom;
         var scrollElement = dom.outer;
 
-        scrollElement.className += " touchScroll";
+        scrollElement.className += " TouchScroll";
 
         // remove scroller contents
         var firstChild, children = document.createDocumentFragment();
@@ -945,25 +948,24 @@ TouchScroll.prototype = {
 
         // setup references to scroller HTML nodes
         var scrollers = dom.scrollers = {
-            inner: scrollElement.querySelector(".tsInner")
+            inner: scrollElement.querySelector(".-ts-inner")
         };
         scrollers.e = scrollers.inner.parentNode;
         scrollers.f = scrollers.inner;
 
-        dom.pasteBoard = scrollElement.querySelector(".tsPasteBoard");
+        var bars = dom.bars = {
+            outer: scrollElement.querySelector(".-ts-bars")
+        };
 
         if (scrollbars) {
-            var bars = dom.bars = {
-                outer: scrollElement.querySelector(".tsBars"),
-                parts: {}
-            };
+            var parts = bars.parts = {};
 
             for (var i = 0, axes = ["e", "f"], axis, bar; (axis = axes[i++]); ) {
-                var bar = bars[axis] = scrollElement.querySelector(".tsBar"+axis.toUpperCase());
-                bars.parts[axis] = [
-                    bar.querySelector(".tsBar1"),
-                    bar.querySelector(".tsBar2"),
-                    bar.querySelector(".tsBar3")
+                var bar = bars[axis] = scrollElement.querySelector(".-ts-bar-"+axis);
+                parts[axis] = [
+                    bar.querySelector(".-ts-bar-1"),
+                    bar.querySelector(".-ts-bar-2"),
+                    bar.querySelector(".-ts-bar-3")
                 ];
             }
 
