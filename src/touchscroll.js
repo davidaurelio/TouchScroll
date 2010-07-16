@@ -207,7 +207,7 @@ TouchScroll._styleSheet = (function() {
 
 [
     ".TouchScroll { position: relative; }",
-    ".-ts-layer { -webkit-transition-property: -webkit-transform }",
+    ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0) }",
     ".-ts-bars { bottom: 0; display: -webkit-box; left: 0; padding: 3px; pointer-events: none; position: absolute; " +
         "opacity: 0;  right: 0; top: 0; z-index: 2147483647; -webkit-transition: opacity 250ms; }",
     ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
