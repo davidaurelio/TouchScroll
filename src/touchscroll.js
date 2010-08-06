@@ -255,6 +255,11 @@ document.addEventListener(events.cancel, TouchScroll, false);
 function TouchScroll(/*HTMLElement*/scrollElement, /*Object*/options){
 	options = options || {};
 	this.elastic = !!options.elastic,
+	this.snapToGrid = !!options.snapToGrid;
+
+	this.containerSize = null;
+	this.maxSegments = {e: 1, f: 1};
+	this.currentSegment = {e: 0, f: 0};
 
 	// references to scroll div elements
 	this.scrollers = {
@@ -429,6 +434,12 @@ TouchScroll.prototype = {
 				e: Math.min(containerSize.e - scrollerSize.e, 0),
 				f: Math.min(containerSize.f - scrollerSize.f, 0)
 			};
+
+		this.containerSize = containerSize;
+		this.maxSegments = {
+			e: Math.ceil(-scrollMin.e / containerSize.e),
+			f: Math.ceil(-scrollMin.f / containerSize.f)
+		};
 
 		scrollbars.container.style.height = containerSize.f + "px";
 
@@ -617,6 +628,21 @@ TouchScroll.prototype = {
 				flickVector.f *= factor;
 
 				this.startFlick(flickVector, flickDuration);
+			}else if(this.snapToGrid){
+				var currentOffset = this._currentOffset;
+				["e", "f"].forEach(function(axis){
+					var axisOffset = currentOffset[axis];
+					var containerLength = this.containerSize[axis];
+					var currentSegment = -Math.floor((axisOffset + 0.5 * containerLength )/containerLength);
+					var maxSegment = this.maxSegments[axis];
+					if(currentSegment < 0){
+						currentSegment = 0;
+					}else if(maxSegment < currentSegment){
+						currentSegment = maxSegment;
+					}
+					this.currentSegment[axis] = currentSegment;
+					return this._snapBack(axis, null, -currentSegment * containerLength);
+				}, this);
 			}
 		}
 
@@ -813,6 +839,9 @@ TouchScroll.prototype = {
 	},
 
 	showScrollbars: function showScrollbars(){
+		if(this.snapToGrid){
+			return;
+		}
 		var style = this._scrollbars.container.style;
 		style.webkitTransitionDuration = "";
 		style.opacity = "1";
@@ -969,9 +998,10 @@ TouchScroll.prototype = {
 	},
 
 	startFlick: function startFlick(matrix, duration){
-		if(!duration){
+		if(!(duration || this.snapToGrid)){
 			return;
 		}
+		duration = duration || config.snapBack.defaultTime;
 
 		var epsilon = 1 / duration, // precision for bezier computations
 			points = config.flicking.timingFunc, // control points for the animation function
@@ -996,22 +1026,58 @@ TouchScroll.prototype = {
 				segmentFraction = 1; // the fraction of the flick distance until crossing scroller bounds
 
 			// compute distance fraction where flicking crosses scroller bounds
-			if(target < min[axis]){
-				segmentFraction = 1 - Math.max(Math.min((target - min[axis]) / matrix[axis], 1), 0);
-			}else if(target > 0){
-				segmentFraction = 1 - Math.max(Math.min((target - 0) / matrix[axis], 1), 0);
+			var minOffset = min[axis];
+			var maxOffset = 0;
+			if(this.snapToGrid){
+				var axisOffset = currentOffset[axis];
+				var containerLength = this.containerSize[axis];
+				var currentSegment = -Math.floor((axisOffset + 0.5 * containerLength )/containerLength);
+				var maxSegment = this.maxSegments[axis];
+				if(currentSegment < 0){
+					currentSegment = 0;
+				}else if(maxSegment < currentSegment){
+					currentSegment = maxSegment;
+				}
+				this.currentSegment[axis] = currentSegment;
+
+				var directionChange = currentSegment !=
+					-Math.floor((axisOffset)/containerLength);
+				if(distance > 0){
+					directionChange = !directionChange;
+				}
+				maxOffset = -currentSegment * containerLength;
+				minOffset = maxOffset - containerLength;
+
+				if(directionChange || !distance){
+					return this._snapBack(axis, null, -currentSegment * containerLength);
+				}
 			}
 
-			var flick = segmentFraction * distance,
+			var segmentFraction, flick, bounce;
+			if(this.snapToGrid){
+				flick = (distance < 0 ? minOffset : maxOffset) - axisOffset;
+				bounce = 0;
+				segmentFraction = flick / distance;
+			}else{
+				if(target < minOffset){
+					segmentFraction = 1 - Math.max(Math.min((target - minOffset) / matrix[axis], 1), 0);
+				}else if(target > maxOffset){
+					segmentFraction = 1 - Math.max(Math.min((target - maxOffset) / matrix[axis], 1), 0);
+				}
+
+				flick = segmentFraction * distance;
 				bounce = distance - flick;
+			}
 
 			if(!(flick || bounce)){
 				this._snapBack(axis);
 				return;
 			}
 
-			var t = timingFunc.getTforY(segmentFraction, epsilon),
-				timeFraction = timingFunc.getPointForT(t).x,
+			var t = timingFunc.getTforY(segmentFraction, epsilon);
+			if (t > 1) { t = 1; }
+
+			var timeFraction = timingFunc.getPointForT(t).x,
 				bezierCurves = timingFunc.divideAtT(t);
 
 			var flickTransform =  new WebKitCSSMatrix();
@@ -1101,7 +1167,7 @@ TouchScroll.prototype = {
 		return false;
 	},
 
-	_snapBack: function _snapBack(/*String?*/axis, /*Number?*/duration){ /*Boolean*/
+	_snapBack: function _snapBack(/*String?*/axis, /*Number?*/duration, /*Number?*/target){ /*Boolean*/
 		if(axis == null){
 			var snapBackE = this._snapBack("e", duration);
 			var snapBackF = this._snapBack("f", duration);
@@ -1115,8 +1181,8 @@ TouchScroll.prototype = {
 			cp = config.snapBack.timingFunc, // control points
 			timingFunc = new CubicBezier(cp[0], cp[1], cp[2], cp[3]);
 
-		if(offset[axis] < this._scrollMin[axis] || offset[axis] > 0){
-			offset[axis] = Math.max(Math.min(offset[axis], 0), this._scrollMin[axis]);
+		if(target != null || offset[axis] < this._scrollMin[axis] || offset[axis] > 0){
+			offset[axis] = target != null ? target : Math.max(Math.min(offset[axis], 0), this._scrollMin[axis]);
 			this._squeezeScrollbar(axis, 0, offset[axis] < 0, duration, timingFunc);
 			applyMatrixToNode(scroller, offset, duration + "ms", timingFunc);
 
