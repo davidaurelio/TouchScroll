@@ -932,8 +932,16 @@ TouchScroll.prototype = {
 		}
 
 		var duration = event1.timeStamp - event0.timeStamp,
-			matrix = event1.matrix.multiply(event0.matrix.inverse()),
-			length = Math.sqrt(matrix.e * matrix.e + matrix.f * matrix.f);
+			matrix = event1.matrix.multiply(event0.matrix.inverse());
+
+		var scrolls = this._scrolls;
+		if (!scrolls.e) {
+			matrix.e = 0;
+		}
+		if (!scrolls.f) {
+			matrix.f = 0;
+		}
+		var length = Math.sqrt(matrix.e * matrix.e + matrix.f * matrix.f);
 
 		return {
 			duration: duration, // move duration in miliseconds
@@ -1011,16 +1019,16 @@ TouchScroll.prototype = {
 			scrollbars = this._scrollbars;
 
 		roundMatrix(matrix);
-		if(!this._scrolls.e){
-			matrix.e = 0;
-		}
-		if(!this._scrolls.f){
-			matrix.f = 0;
-		}
-
 		var scrollTarget = this._currentOffset.multiply(matrix);
+		var scrolls = this._scrolls;
+
+		if(this.snapToGrid){
+			var maxSegments = this.maxSegments;
+			var currentSegments = this.currentSegment;
+		}
 
 		["e", "f"].forEach(function(axis){
+			if(!scrolls[axis]){ return; }
 			var distance = matrix[axis],
 				target = scrollTarget[axis],
 				segmentFraction = 1; // the fraction of the flick distance until crossing scroller bounds
@@ -1029,33 +1037,28 @@ TouchScroll.prototype = {
 			var minOffset = min[axis];
 			var maxOffset = 0;
 			if(this.snapToGrid){
-				var axisOffset = currentOffset[axis];
 				var containerLength = this.containerSize[axis];
-				var currentSegment = -Math.floor((axisOffset + 0.5 * containerLength )/containerLength);
-				var maxSegment = this.maxSegments[axis];
-				if(currentSegment < 0){
-					currentSegment = 0;
-				}else if(maxSegment < currentSegment){
-					currentSegment = maxSegment;
+				var increment = distance > 0 ? -1 : 1;
+				var maxSegment = maxSegments[axis];
+				var currentSegment = currentSegments[axis];
+				var flickToSegment = currentSegment + increment;
+				if(flickToSegment < 0){
+					flickToSegment = 0;
+				}else if(maxSegment < flickToSegment){
+					flickToSegment = maxSegment;
 				}
-				this.currentSegment[axis] = currentSegment;
+				this.currentSegment[axis] = flickToSegment;
 
-				var directionChange = currentSegment !=
-					-Math.floor((axisOffset)/containerLength);
-				if(distance > 0){
-					directionChange = !directionChange;
-				}
-				maxOffset = -currentSegment * containerLength;
-				minOffset = maxOffset - containerLength;
-
-				if(directionChange || !distance){
+				if(flickToSegment == currentSegment || !distance){
 					return this._snapBack(axis, null, -currentSegment * containerLength);
 				}
+
+				maxOffset = minOffset = -flickToSegment * containerLength;
 			}
 
 			var segmentFraction, flick, bounce;
 			if(this.snapToGrid){
-				flick = (distance < 0 ? minOffset : maxOffset) - axisOffset;
+				flick = (distance < 0 ? minOffset : maxOffset) - currentOffset[axis];
 				bounce = 0;
 				segmentFraction = flick / distance;
 			}else{
