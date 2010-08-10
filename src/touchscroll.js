@@ -515,7 +515,7 @@ TouchScroll.prototype = {
 		this._trackEvent(event);
 		this._startEventTarget = event.target; // We track this to work around a bug in android, see below
 		var wasAnimating = this._stopAnimations();
-
+		this._snapBack(null, 0);
 		this._startEvent = event;
 
 		event.stopPropagation();
@@ -612,6 +612,7 @@ TouchScroll.prototype = {
 				null// relatedTarget
 			);
 			node.dispatchEvent(clickEvent);
+			this.hideScrollbars();
 		}else if(this._isScrolling){
 			var moveSpec = this._getLastMove();
 			if(moveSpec.duration <= config.flicking.triggerThreshold && moveSpec.length){
@@ -628,28 +629,17 @@ TouchScroll.prototype = {
 				flickVector.f *= factor;
 
 				this.startFlick(flickVector, flickDuration);
-			}else if(this.snapToGrid){
-				var currentOffset = this._currentOffset;
-				["e", "f"].forEach(function(axis){
-					var axisOffset = currentOffset[axis];
-					var containerLength = this.containerSize[axis];
-					var currentSegment = -Math.floor((axisOffset + 0.5 * containerLength )/containerLength);
-					var maxSegment = this.maxSegments[axis];
-					if(currentSegment < 0){
-						currentSegment = 0;
-					}else if(maxSegment < currentSegment){
-						currentSegment = maxSegment;
-					}
-					this.currentSegment[axis] = currentSegment;
-					return this._snapBack(axis, null, -currentSegment * containerLength);
-				}, this);
 			}
 		}
 
 		if(!(this.isAnimating())){
-			var snappingBack = this._snapBack();
-			if(!snappingBack){
-				this.hideScrollbars();
+			if(this.snapToGrid){
+				this._snapBackToGrid();
+			}else{
+				var snappingBack = this._snapBack();
+				if(!snappingBack){
+					this.hideScrollbars();
+				}
 			}
 		}
 		delete this._startEventTarget;
@@ -919,6 +909,10 @@ TouchScroll.prototype = {
 		// deleting queued bounces
 		this._bounces.e = this._bounces.f = null;
 
+		// resetting state
+		var isFlicking = this._flicking;
+		isFlicking.e = isFlicking.f = false;
+
 		return isAnimating;
 	},
 
@@ -1007,6 +1001,7 @@ TouchScroll.prototype = {
 
 	startFlick: function startFlick(matrix, duration){
 		if(!(duration || this.snapToGrid)){
+			this._snapBack();
 			return;
 		}
 		duration = duration || config.snapBack.defaultTime;
@@ -1027,8 +1022,12 @@ TouchScroll.prototype = {
 			var currentSegments = this.currentSegment;
 		}
 
+		var animating = {e: true, f: true};
 		["e", "f"].forEach(function(axis){
-			if(!scrolls[axis]){ return; }
+			if(!scrolls[axis]){
+				animating[axis] = false;
+				return;
+			}
 			var distance = matrix[axis],
 				target = scrollTarget[axis],
 				segmentFraction = 1; // the fraction of the flick distance until crossing scroller bounds
@@ -1073,12 +1072,12 @@ TouchScroll.prototype = {
 			}
 
 			if(!(flick || bounce)){
-				this._snapBack(axis);
+				animating[axis] = this._snapBack(axis);
 				return;
 			}
 
 			var t = timingFunc.getTforY(segmentFraction, epsilon);
-			if (t > 1) { t = 1; }
+			if (t > 1) { t = 1; } else if (t < 0) { t = 0 }
 
 			var timeFraction = timingFunc.getPointForT(t).x,
 				bezierCurves = timingFunc.divideAtT(t);
@@ -1146,6 +1145,10 @@ TouchScroll.prototype = {
 				}, flickDuration + bounceDuration));
 			}
 		}, this);
+
+		if(!(animating.e || animating.f)){
+			this.hideScrollbars();
+		}
 	},
 
 	_playQueuedBounce: function _playQueuedBounce(axis){
@@ -1171,13 +1174,21 @@ TouchScroll.prototype = {
 	},
 
 	_snapBack: function _snapBack(/*String?*/axis, /*Number?*/duration, /*Number?*/target){ /*Boolean*/
+		duration = duration != null ? duration : config.snapBack.defaultTime;
 		if(axis == null){
 			var snapBackE = this._snapBack("e", duration);
 			var snapBackF = this._snapBack("f", duration);
-			return snapBackE || snapBackF;
+			var snappingBack = snapBackE || snapBackF;
+			if(!snappingBack){
+				this.hideScrollbars();
+			}else{
+				var scroller = this;
+				this._animationTimeouts.f.push(setTimeout(function(){
+					scroller.hideScrollbars();
+				}, duration));
+			}
+			return snappingBack;
 		}
-
-		duration = duration || config.snapBack.defaultTime;
 
 		var scroller = this.scrollers[axis],
 			offset = getMatrixFromNode(scroller),
@@ -1189,10 +1200,28 @@ TouchScroll.prototype = {
 			this._squeezeScrollbar(axis, 0, offset[axis] < 0, duration, timingFunc);
 			applyMatrixToNode(scroller, offset, duration + "ms", timingFunc);
 
-			return true;
+			return Boolean(duration);
 		}
 
 		return false;
+	},
+
+	_snapBackToGrid: function snapBackToGrid(){
+		var currentOffset = this._currentOffset;
+		var containerSize = this.containerSize;
+		["e", "f"].forEach(function(axis){
+			var axisOffset = currentOffset[axis];
+			var containerLength = containerSize[axis];
+			var currentSegment = -Math.floor((axisOffset + 0.5 * containerLength )/containerLength);
+			var maxSegment = this.maxSegments[axis];
+			if(currentSegment < 0){
+				currentSegment = 0;
+			}else if(maxSegment < currentSegment){
+				currentSegment = maxSegment;
+			}
+			this.currentSegment[axis] = currentSegment;
+			return this._snapBack(axis, null, -currentSegment * containerLength);
+		}, this);
 	}
 };
 
