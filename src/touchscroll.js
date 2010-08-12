@@ -140,7 +140,7 @@ TouchScroll._hasTouchSupport = (function() {
  */
 TouchScroll._parsesMatrixCorrectly = (function() {
     var m = new WebKitCSSMatrix("matrix(1, 0, 0, 1, -20, -30)");
-    return m.e == -20 && m.f == -30;
+    return m.e === -20 && m.f === -30;
 }());
 
 /**
@@ -197,7 +197,7 @@ TouchScroll._styleSheet = (function() {
     parent.insertBefore(styleNode, parent.firstChild);
 
     for (var i = 0, sheet; (sheet = doc.styleSheets[i]); i++) {
-        if (styleNode == sheet.ownerNode) {
+        if (styleNode === sheet.ownerNode) {
             return sheet; // return the newly created stylesheet
         }
     }
@@ -229,7 +229,7 @@ function TouchScroll(scrollElement, options) {
     this.elastic = !!options.elastic;
 
     /** @type {Boolean} Whether to build and use scrollbars. */
-    var useScrollbars = options.scrollbars == null ? true : !!options.scrollbars;
+    var useScrollbars = "scrollbars" in options ?  !!options.scrollbars : true;
 
     /**
      * An array of timeout handles for queued animations and actions that have
@@ -262,6 +262,9 @@ function TouchScroll(scrollElement, options) {
     /** @type {Object} Stores whether each axis is scrolling. */
     this._isScrolling = {e: false, f: false, general: false};
 
+    /** @type {String[]} Stores the te ids of all scrolling axes */
+    this._scrollingAxes = [];
+
     /** @type {Boolean} Whether the scroller is currently tracking touches (other than start). */
     this._isTracking = false;
 
@@ -290,6 +293,17 @@ function TouchScroll(scrollElement, options) {
 
 TouchScroll.prototype = {
     config: TouchScroll.config,
+
+    /**
+     * All axes -- "e" is the x-axis, "f" is the y-axis.
+     *
+     * This property exists to avoid dynamic object creation during runtime.
+     *
+     * @private
+     * @static
+     * @type {String[]}
+     */
+    _axes: ["e", "f"],
 
     _eventNames: TouchScroll._eventNames,
 
@@ -513,8 +527,8 @@ TouchScroll.prototype = {
 
         // Check whether we really need to refresh ... if not, leave here.
         if (!force &&
-            offsetWidth == m.offsetWidth && offsetHeight == m.offsetHeight &&
-            scrollWidth == m.scrollWidth && scrollHeight == m.scrollHeight
+            offsetWidth === m.offsetWidth && offsetHeight === m.offsetHeight &&
+            scrollWidth === m.scrollWidth && scrollHeight === m.scrollHeight
         ) {
                 return;
         }
@@ -536,11 +550,15 @@ TouchScroll.prototype = {
         };
         isScrolling.general = isScrolling.e || isScrolling.f;
 
+        this._scrollingAxes = this._axes.filter(function(axis) {
+            return isScrolling[axis];
+        });
+
         // hide/show scrollbars
         var bars = dom.bars;
         if (bars) {
-            var axes = ["e", "f"];
-            for (var i = 0, axis, bar; (axis = axes[i++]); ) {
+            var i = 0, axes = this._axes, axis ;
+            while ((axis = axes[i++])) {
                 bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
                 if (isScrolling[axis]) {
@@ -564,7 +582,9 @@ TouchScroll.prototype = {
             ));
 
             var endSize = barMetrics.endSize;
-            for (var i = 0, axis, parts, style1, size, scale, offset; (axis = axes[i++]); ) {
+
+            var i = 0, axis, parts, style1, size, scale, offset
+            while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
                 size = barSizes[axis];
@@ -590,7 +610,7 @@ TouchScroll.prototype = {
      * @returns {Boolean} Whether the scroller was beyond regular bounds.
      */
     snapBack: function snapBack(axis) {
-        var axes = axis ? [axis] : ["e", "f"];
+        var axes = axis ? [axis] : this._scrollingAxes;
         var scrollOffset = this._scrollOffset;
         var maxOffset = this._maxOffset;
         var dom = this._dom;
@@ -598,8 +618,10 @@ TouchScroll.prototype = {
         var snapBackConfig = this.config.snapBack;
         var duration = snapBackConfig.defaultTime;
         var timingFunc = snapBackConfig.timingFunc;
-        for (var i = 0, snapAxis; (snapAxis = axes[i++]); ) {
+
+        var i = 0, snapAxis;
         var timeout = 0;
+        while ((snapAxis = axes[i++])) {
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
             var scrollerStyle = scrollers[snapAxis].style;
@@ -690,20 +712,18 @@ TouchScroll.prototype = {
      * @returns {CSSMatrix} This is a reference to {@link _scrollOffset}
      */
     _determineOffset: function _determineOffset(round) {
-        var isScrolling = this._isScrolling;
         var scrollers = this._dom.scrollers;
         var offset = this._scrollOffset;
 
-        for (var i = 0, axes = ["e", "f"], axis, offset; (axis = axes[i++]); ) {
-            if (isScrolling[axis]) {
-                var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
-                if (round) {
-                    // This is a high performance rounding method:
-                    // Add 0.5 and then do a double binary inversion
-                    axisOffset = ~~(axisOffset + 0.5);
-                }
-                offset[axis] = axisOffset;
+        var i = 0, axes = this._scrollingAxes, axis;
+        while ((axis = axes[i++])) {
+            var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
+            if (round) {
+                // This is a high performance rounding method:
+                // Add 0.5 and then do a double binary inversion
+                axisOffset = ~~(axisOffset + 0.5);
             }
+            offset[axis] = axisOffset;
         }
 
         return offset;
@@ -730,7 +750,6 @@ TouchScroll.prototype = {
         var scrollers = dom.scrollers;
         var scrollOffset = this._scrollOffset;
 
-        var isScrolling = this._isScrolling;
         var maxOffset = this._maxOffset;
 
         var configFlicking = config.flicking;
@@ -756,12 +775,10 @@ TouchScroll.prototype = {
         var durations = [];
 
         // flick for every axis
-        for (var i = 0, axes = ["e", "f"], axis; (axis = axes[i++]); ){
+        var i = 0, axes = this._scrollingAxes, axis;
+        while ((axis = axes[i++])) {
             var distance = vector[axis];
-            if (!isScrolling[axis]) {
-                continue;
-            }
-            else if (!distance) {
+            if (!distance) {
                 this.snapBack(axis);
                 continue;
             }
@@ -921,7 +938,8 @@ TouchScroll.prototype = {
         if (scrollbars) {
             var parts = bars.parts = {};
 
-            for (var i = 0, axes = ["e", "f"], axis, bar; (axis = axes[i++]); ) {
+            var i = 0, axes = this._axes, axis;
+            while ((axis = axes[i++])) {
                 var bar = bars[axis] = scrollElement.querySelector(".-ts-bar-"+axis);
                 parts[axis] = [
                     bar.querySelector(".-ts-bar-1"),
@@ -1121,7 +1139,8 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        for (var axes = ["e", "f"], i = 0, axis, style, matrix; (axis = axes[i++]); ) {
+        var i = 0, axes = this._axes, axis;
+        while ((axis = axes[i++])) {
             style = scrollers[axis].style;
             matrix = new this._Matrix();
             matrix[axis] = offset[axis];
