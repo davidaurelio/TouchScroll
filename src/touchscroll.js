@@ -469,13 +469,14 @@ TouchScroll.prototype = {
         }
 
         // calculate flick
+        var isScrolling = this._isScrolling;
         var configFlicking = this.config.flicking;
         var lastEvents = this._lastEvents;
         var event0 = lastEvents[0];
         var event1 = lastEvents[1];
         var lag = event.timeStamp - event1.timeStamp;
-        var moveX = event1.pageX - event0.pageX;
-        var moveY = event1.pageY - event0.pageY;
+        var moveX = isScrolling.e ? event1.pageX - event0.pageX : 0;
+        var moveY = isScrolling.f ? event1.pageY - event0.pageY : 0;
         var moveDistance = Math.sqrt(moveX * moveX + moveY * moveY);
         var moveDuration = event1.timeStamp - event0.timeStamp;
         var moveSpeed = moveDistance / moveDuration;
