@@ -639,6 +639,7 @@ TouchScroll.prototype = {
         }
 
         var scroller = this;
+        var timeouts = this._scrollTimeouts;
         timeouts[timeouts.length] = setTimeout(function() {
             scroller._endScroll();
         }, timeout);
