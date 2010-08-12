@@ -599,6 +599,7 @@ TouchScroll.prototype = {
         var duration = snapBackConfig.defaultTime;
         var timingFunc = snapBackConfig.timingFunc;
         for (var i = 0, snapAxis; (snapAxis = axes[i++]); ) {
+        var timeout = 0;
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
             var scrollerStyle = scrollers[snapAxis].style;
@@ -610,12 +611,15 @@ TouchScroll.prototype = {
             offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
             this._setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration, 0);
 
-            var scroller = this;
-            var timeouts = this._scrollTimeouts;
-            timeouts[timeouts.length] = setTimeout(function() {
-                scroller._endScroll();
-            }, duration);
+            if (duration > timeout) {
+                timeout = duration;
+            }
         }
+
+        var scroller = this;
+        timeouts[timeouts.length] = setTimeout(function() {
+            scroller._endScroll();
+        }, timeout);
     },
 
     /**
