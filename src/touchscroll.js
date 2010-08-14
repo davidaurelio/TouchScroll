@@ -481,10 +481,16 @@ TouchScroll.prototype = {
         var moveDuration = event1.timeStamp - event0.timeStamp;
         var moveSpeed = moveDistance / moveDuration;
 
-        if (lag <= configFlicking.triggerThreshold && moveSpeed >= configFlicking.minSpeed) {
+        var flickAllowed = lag <= configFlicking.triggerThreshold &&
+            moveSpeed >= configFlicking.minSpeed;
+
+        if (flickAllowed) {
             var flick = this._computeFlick(moveSpeed);
             var flickDuration = flick[0];
             var flickDistance = flick[1];
+        }
+
+        if (flickAllowed && flick[0] && flick[1]) {
             var flickVector = new this._Matrix();
             flickVector.e = moveX / moveDistance * flickDistance;
             flickVector.f = moveY / moveDistance * flickDistance;
@@ -748,18 +754,15 @@ TouchScroll.prototype = {
     _flick: function _flick(duration, vector) {
         // local variables for everything to minimize lookups
         var config = this.config;
+
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        var scrollOffset = this._scrollOffset;
 
+        var scrollOffset = this._scrollOffset;
         var maxOffset = this._maxOffset;
 
-        var configFlicking = config.flicking;
-        var timingFuncPoints = configFlicking.timingFunc;
-        var timingFunc = new CubicBezier(timingFuncPoints[0],
-                                         timingFuncPoints[1],
-                                         timingFuncPoints[2],
-                                         timingFuncPoints[3]);
+        var tf = config.flicking.timingFunc;
+        var timingFunc = new CubicBezier(tf[0], tf[1], tf[2], tf[3]);
         var epsilon = 1 / duration; // precision for bezier computations
 
         var configSnapBack = config.snapBack;
@@ -774,7 +777,7 @@ TouchScroll.prototype = {
         var flickTarget = scrollOffset.multiply(vector);
         var zeroMatrix = new this._Matrix();
 
-        var durations = [];
+        var maxDuration = 0;
 
         // flick for every axis
         var i = 0, axes = this._scrollingAxes, axis;
@@ -786,6 +789,7 @@ TouchScroll.prototype = {
             }
             var targetFlick = flickTarget[axis];
             var axisMin = -maxOffset[axis];
+            var axisMax = 0;
             var scrollFrom = scrollOffset[axis];
 
             var distanceFlick = distance;
@@ -795,9 +799,9 @@ TouchScroll.prototype = {
                 distanceFlick = axisMin - scrollFrom;
                 targetFlick = axisMin;
             }
-            else if (targetFlick > 0) {
-                distanceFlick = 0 - scrollFrom;
-                targetFlick = 0;
+            else if (targetFlick > axisMax) {
+                distanceFlick = axisMax - scrollFrom;
+                targetFlick = axisMax;
             }
             var distanceBounce = distance - distanceFlick;
 
@@ -805,7 +809,7 @@ TouchScroll.prototype = {
             var t = timingFunc.getTforY(distanceFlick / distance, epsilon);
             if (t < 0) { // already beyond scroller bounds
                 t = 0;
-                distanceBounce -= distanceFlick;
+                distanceBounce = distance;
             }
 
             var bezierCurves = timingFunc.divideAtT(t);
@@ -864,14 +868,17 @@ TouchScroll.prototype = {
                                  durationSnapBack,
                                  durationFlick + durationBounce);
 
-            durations[durations.length] = durationFlick + durationBounce + durationSnapBack;
+            var animDuration = durationFlick + durationBounce + durationSnapBack
+            if (animDuration > maxDuration) {
+                maxDuration = animDuration;
+            }
         }
 
         var scroller = this;
         var timeouts = this._scrollTimeouts;
         timeouts[timeouts.length] = setTimeout(function() {
             scroller._endScroll();
-        }, Math.max.apply(Math, durations));
+        }, maxDuration);
     },
 
     /**
