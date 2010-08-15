@@ -1119,19 +1119,19 @@ TouchScroll.prototype = {
      * @param {Number} [delay] Miliseconds
      */
     _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration, delay) {
+
         delay = delay || 0;
 
-        if (timingFunc) {
-            style.webkitTransitionTimingFunction =
-                timingFunc.join ?
-                "cubic-bezier(" + timingFunc.join(",") + ")" :
-                timingFunc;
-        }
-
         var handle = setTimeout(function() {
+            if (timingFunc) {
+                style.webkitTransitionTimingFunction =
+                    timingFunc.join ?
+                    "cubic-bezier(" + timingFunc.join(",") + ")" :
+                    timingFunc;
+            }
             style.webkitTransitionDuration = (duration || 0) + "ms";
             style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-        }, delay || 0);
+        }, delay);
 
         if (delay) {
             var timeouts = this._scrollTimeouts;
