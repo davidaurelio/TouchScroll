@@ -770,6 +770,8 @@ TouchScroll.prototype = {
         var snapBackDefaultTime = configSnapBack.defaultTime;
         var configSnapBackTimingFunc = configSnapBack.timingFunc;
 
+        var isElastic = this.elastic;
+
         var configElasticity = config.elasticity;
         var configBounceFactor = configElasticity.factorFlick;
         var maxBounceLength = configElasticity.max;
@@ -821,24 +823,23 @@ TouchScroll.prototype = {
             var durationBounce = duration - durationFlick;
             var durationSnapBack = 0;
 
-
-            if (distanceFlick !== distance && this.elastic) {
-                //durationBounce *= configBounceFactor;
-                //distanceBounce *= configBounceFactor;
+            if (isElastic && distanceBounce) {
+                durationBounce *= configBounceFactor;
+                distanceBounce *= configBounceFactor;
 
                 // limit the bounce to the configured maximum
-                //if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
-                //    var sign = distanceBounce < 0 ? -1 : 1;
-                //    //durationBounce *=  maxBounceLength / distanceBounce * sign;
-                //    distanceBounce = maxBounceLength * sign;
-                //}
+                if (distanceBounce > maxBounceLength || distanceBounce < -maxBounceLength) {
+                    var sign = distanceBounce < 0 ? -1 : 1;
+                    durationBounce *=  maxBounceLength / distanceBounce * sign;
+                    distanceBounce = maxBounceLength * sign;
+                }
 
                 // overwrite control points to achieve a smooth transition between flick and bounce
                 timingFuncBounce = bezierCurves[1];
                 timingFuncSnapBack = configSnapBackTimingFunc;
 
-                //durationSnapBack = durationBounce !== 0 && snapBackAlwaysDefaultTime ?
-                //                   snapBackDefaultTime : durationBounce;
+                durationSnapBack = durationBounce !== 0 && snapBackAlwaysDefaultTime ?
+                                   snapBackDefaultTime : durationBounce;
             }
 
             /*
@@ -852,21 +853,26 @@ TouchScroll.prototype = {
 
             // queue each transition
             var scrollerStyle = scrollers[axis].style;
+            // flick
             this._setStyleOffset(scrollerStyle,
                                  flickMatrix,
                                  timingFuncFlick,
                                  durationFlick,
                                  0);
-            this._setStyleOffset(scrollerStyle,
-                                 bounceMatrix,
-                                 timingFuncBounce,
-                                 durationBounce,
-                                 durationFlick);
-            this._setStyleOffset(scrollerStyle,
-                                 flickMatrix,
-                                 timingFuncSnapBack,
-                                 durationSnapBack,
-                                 durationFlick + durationBounce);
+            if (isElastic) {
+                // bounce
+                this._setStyleOffset(scrollerStyle,
+                                     bounceMatrix,
+                                     timingFuncBounce,
+                                     durationBounce,
+                                     durationFlick);
+                // snapback
+                this._setStyleOffset(scrollerStyle,
+                                     flickMatrix,
+                                     timingFuncSnapBack,
+                                     durationSnapBack,
+                                     durationFlick + durationBounce);
+            }
 
             var animDuration = durationFlick + durationBounce + durationSnapBack
             if (animDuration > maxDuration) {
