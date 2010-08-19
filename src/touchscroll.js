@@ -458,15 +458,11 @@ TouchScroll.prototype = {
     },
 
     onTouchEnd: function onTouchEnd(event) {
-        if (!this._isTracking) {
+        if (!this._isTracking || !this._scrollBegan) {
             return;
         }
 
-        this._isTracking = false;
-
-        if (!this._scrollBegan) {
-            return;
-        }
+        this._isTracking = this._scrollBegan = false;
 
         // calculate flick
         var isScrolling = this._isScrolling;
@@ -501,7 +497,6 @@ TouchScroll.prototype = {
             this.snapBack();
         }
 
-        this._scrollBegan = false;
         this._lastEvents[0] = this._lastEvents[1] = null;
     },
 
