@@ -512,7 +512,7 @@ TouchScroll.prototype = {
         scrollMatrix.f = -f - scrollOffset.f ;
 
         if (duration > 0) {
-            this._flick(duration, scrollMatrix)
+            this._flick(duration, scrollMatrix);
         }
         else {
             this._scrollBy(scrollMatrix);
@@ -564,7 +564,7 @@ TouchScroll.prototype = {
         // hide/show scrollbars
         var bars = dom.bars;
         if (bars) {
-            var i = 0, axes = this._axes, axis ;
+            var i = 0, axes = this._axes, axis, bar;
             while ((axis = axes[i++])) {
                 bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
@@ -590,7 +590,7 @@ TouchScroll.prototype = {
 
             var endSize = barMetrics.endSize;
 
-            var i = 0, axis, parts, style1, size, scale, offset
+            var i = 0, axis, parts, style1, size, scale, offset;
             while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
                 style1 = parts[1].style;
@@ -636,7 +636,7 @@ TouchScroll.prototype = {
                 continue;
             }
 
-            var offsetTo = new this._Matrix
+            var offsetTo = new this._Matrix();
             offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
             this._setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration, 0);
 
@@ -874,7 +874,7 @@ TouchScroll.prototype = {
                                      durationFlick + durationBounce);
             }
 
-            var animDuration = durationFlick + durationBounce + durationSnapBack
+            var animDuration = durationFlick + durationBounce + durationSnapBack;
             if (animDuration > maxDuration) {
                 maxDuration = animDuration;
             }
@@ -1154,7 +1154,7 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var offset = this._determineOffset();
 
-        var i = 0, axes = this._axes, axis;
+        var i = 0, axes = this._axes, axis, style, matrix;
         while ((axis = axes[i++])) {
             style = scrollers[axis].style;
             matrix = new this._Matrix();
