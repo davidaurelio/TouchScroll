@@ -244,7 +244,7 @@ function TouchScroll(scrollElement, options) {
         /** @type {Object} Stores the offset height of the scrollbar "tracks". */
         availLength: {e: 0, f: 0}, //TODO: Check if necessary!
         /** @type {Number} Stores the size of the bar ends in pixels (assuming all have the same size). */
-        endSize: 0,
+        tipSize: 0,
         /** @type {Object} Stores the maximum offset for each scroll indicator. */
         maxOffset: {e: 0, f: 0}, //TODO: Check if necessary!
         /** @type {Object} Stores the ratio of scroll layer and scroll indicator offsets. */
@@ -263,7 +263,7 @@ function TouchScroll(scrollElement, options) {
     this._isScrolling = {e: false, f: false, general: false};
 
     /** @type {String[]} Stores the te ids of all scrolling axes */
-    this._scrollingAxes = [];
+    this._activeAxes = [];
 
     /** @type {Boolean} Whether the scroller is currently tracking touches (other than start). */
     this._isTracking = false;
@@ -552,7 +552,7 @@ TouchScroll.prototype = {
         };
         isScrolling.general = isScrolling.e || isScrolling.f;
 
-        this._scrollingAxes = this._axes.filter(function(axis) {
+        var activeAxes = this._activeAxes = this._axes.filter(function(axis) {
             return isScrolling[axis];
         });
 
@@ -612,7 +612,7 @@ TouchScroll.prototype = {
      * @returns {Boolean} Whether the scroller was beyond regular bounds.
      */
     snapBack: function snapBack(axis) {
-        var axes = axis ? [axis] : this._scrollingAxes;
+        var axes = axis ? [axis] : this._activeAxes;
         var scrollOffset = this._scrollOffset;
         var maxOffset = this._maxOffset;
         var dom = this._dom;
@@ -718,7 +718,7 @@ TouchScroll.prototype = {
         var scrollers = this._dom.scrollers;
         var offset = this._scrollOffset;
 
-        var i = 0, axes = this._scrollingAxes, axis;
+        var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
             var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
             if (round) {
@@ -777,7 +777,7 @@ TouchScroll.prototype = {
         var maxDuration = 0;
 
         // flick for every axis
-        var i = 0, axes = this._scrollingAxes, axis;
+        var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
             var distance = vector[axis];
             if (!distance) {
