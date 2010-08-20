@@ -593,28 +593,29 @@ TouchScroll.prototype = {
             var barSizes = barMetrics.sizes;
             barSizes.e = Math.round(Math.max(
                 availLength.e * offsetWidth / scrollWidth
-            ));
+            ), scrollHandleMinSize);
             barSizes.f = Math.round(Math.max(
                 availLength.e * offsetHeight / scrollHeight
-            ));
+            ), scrollHandleMinSize);
 
-            var endSize = barMetrics.endSize;
-
-            var i = 0, axis, parts, style1, size, scale, offset;
+            var i = 0, axes = activeAxes, matrix = new this._Matrix();
+            var axis, parts, size, scale, offset, tipSize;
+            var setStyleOffset = this._setStyleOffset;
             while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
-                style1 = parts[1].style;
+                tipSize = tipSize || parts[0].offsetHeight;
                 size = barSizes[axis];
-                scale = size - endSize * 2;
-                offset = new this._Matrix();
-                offset[axis] = endSize;
-                this._setStyleOffset(style1, offset);
-                style1.webkitTransform += " scale(" + scale + ")";
+                scale = size - tipSize * 2;
+                offset = matrix.translate(0, 0, 0);
+                offset.f = tipSize;
+                setStyleOffset(parts[1].style, offset, null, null, null, null, "scaleY(" + scale + ")");
 
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
-                offset[axis] += scale - 1;
-                this._setStyleOffset(parts[2].style, offset);
+                offset = matrix.translate(0, 0, 0);
+                offset[axis] = tipSize + scale - 1;
+                setStyleOffset(parts[2].style, offset);
             }
+            barMetrics.tipSize = tipSize;
         }
     },
 
@@ -943,9 +944,6 @@ TouchScroll.prototype = {
 
         // set innerHTML from template
         scrollElement.innerHTML = this._scrollerTemplate;
-        if (scrollbars) {
-            scrollElement.innerHTML += this._scrollbarTemplate;
-        }
 
         // setup references to scroller HTML nodes
         var scrollers = dom.scrollers = {
@@ -959,6 +957,7 @@ TouchScroll.prototype = {
         };
 
         if (scrollbars) {
+            bars.outer.innerHTML = this._scrollbarTemplate;
             var parts = bars.parts = {};
 
             var i = 0, axes = this._axes, axis;
@@ -970,13 +969,6 @@ TouchScroll.prototype = {
                     bar.querySelector(".-ts-bar-3")
                 ];
             }
-
-            var cs = window.getComputedStyle(bars.parts.e[0]);
-            this._barMetrics.endSize =
-                parseFloat(cs.paddingTop) +
-                parseFloat(cs.height) +
-                parseFloat(cs.paddingBottom);
-            cs = null; // release live objects
         }
 
         // register event listeners
