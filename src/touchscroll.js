@@ -638,6 +638,7 @@ TouchScroll.prototype = {
 
         var i = 0, snapAxis;
         var timeout = 0;
+        var setStyleOffset = this._setStyleOffset;
         while ((snapAxis = axes[i++])) {
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
@@ -648,7 +649,7 @@ TouchScroll.prototype = {
 
             var offsetTo = new this._Matrix();
             offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
-            this._setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration, 0);
+            setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration);
 
             if (duration > timeout) {
                 timeout = duration;
@@ -790,6 +791,7 @@ TouchScroll.prototype = {
         var zeroMatrix = new this._Matrix();
 
         var maxDuration = 0;
+        var setStyleOffset = this._setStyleOffset;
 
         // flick for every axis
         var i = 0, axes = this._activeAxes, axis;
@@ -864,24 +866,20 @@ TouchScroll.prototype = {
             // queue each transition
             var scrollerStyle = scrollers[axis].style;
             // flick
-            this._setStyleOffset(scrollerStyle,
-                                 flickMatrix,
-                                 timingFuncFlick,
-                                 durationFlick,
-                                 0);
+            setStyleOffset(scrollerStyle, flickMatrix, timingFuncFlick, durationFlick);
             if (isElastic) {
                 // bounce
-                this._setStyleOffset(scrollerStyle,
-                                     bounceMatrix,
-                                     timingFuncBounce,
-                                     durationBounce,
-                                     durationFlick);
+                setStyleOffset(scrollerStyle,
+                               bounceMatrix,
+                               timingFuncBounce,
+                               durationBounce,
+                               durationFlick);
                 // snapback
-                this._setStyleOffset(scrollerStyle,
-                                     flickMatrix,
-                                     timingFuncSnapBack,
-                                     durationSnapBack,
-                                     durationFlick + durationBounce);
+                setStyleOffset(scrollerStyle,
+                               flickMatrix,
+                               timingFuncSnapBack,
+                               durationSnapBack,
+                               durationFlick + durationBounce);
             }
 
             var animDuration = durationFlick + durationBounce + durationSnapBack;
@@ -1118,8 +1116,9 @@ TouchScroll.prototype = {
 
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        this._setStyleOffset(scrollers.e.style, offsetE);
-        this._setStyleOffset(scrollers.f.style, offsetF);
+        var setStyleOffset = this._setStyleOffset;
+        setStyleOffset(scrollers.e.style, offsetE);
+        setStyleOffset(scrollers.f.style, offsetF);
 
         //TODO: add scrollbars
         if (dom.bars) {
