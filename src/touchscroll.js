@@ -870,17 +870,17 @@ TouchScroll.prototype = {
             setStyleOffset(scrollerStyle, flickMatrix, timingFuncFlick, durationFlick);
             if (isElastic) {
                 // bounce
-                setStyleOffset(scrollerStyle,
-                               bounceMatrix,
-                               timingFuncBounce,
-                               durationBounce,
-                               durationFlick);
+                this._setStyleOffset(scrollerStyle,
+                                     bounceMatrix,
+                                     timingFuncBounce,
+                                     durationBounce,
+                                     durationFlick);
                 // snapback
-                setStyleOffset(scrollerStyle,
-                               flickMatrix,
-                               timingFuncSnapBack,
-                               durationSnapBack,
-                               durationFlick + durationBounce);
+                this._setStyleOffset(scrollerStyle,
+                                     flickMatrix,
+                                     timingFuncSnapBack,
+                                     durationSnapBack,
+                                     durationFlick + durationBounce);
             }
 
             var animDuration = durationFlick + durationBounce + durationSnapBack;
