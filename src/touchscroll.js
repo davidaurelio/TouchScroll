@@ -1117,13 +1117,21 @@ TouchScroll.prototype = {
      * @param {WebKitCSSNatrix} matrix
      * @param {Array|Object|String} [timingFunc] Control points for a "cubic-bezier" declaration.
      * @param {Number} [duration] Miliseconds
-     * @param {Number} [delay] Miliseconds
+     * @param {Number} [timeout] A timeout length to use for style application in miliseconds.
+     * @param {Number} [delay] The `transition-delay` to apply in miliseconds.
+     * @param {String} [transforms] Additional transforms to apply.
      */
-    _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration, delay) {
-
-        delay = delay || 0;
-
-        var handle = setTimeout(function() {
+    _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration,
+                                              timeout, delay, transforms) {
+        if (timeout) {
+            var setStyleOffset = this._setStyleOffset;
+            var timeouts = this._scrollTimeouts;
+            timeouts[timeouts.length] = setTimeout(function() {
+                setStyleOffset(style, matrix, timingFunc, duration, 0, delay, transforms);
+            }, timeout);
+        }
+        else {
+            transforms = transforms || "";
             if (timingFunc) {
                 style.webkitTransitionTimingFunction =
                     timingFunc.join ?
@@ -1131,12 +1139,9 @@ TouchScroll.prototype = {
                     timingFunc;
             }
             style.webkitTransitionDuration = (duration || 0) + "ms";
-            style.webkitTransform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-        }, delay);
-
-        if (delay) {
-            var timeouts = this._scrollTimeouts;
-            timeouts[timeouts.length] = handle;
+            style.webkitTransitionDelay = (delay || 0) + "ms";
+            var transformText = "translate(" + matrix.e + "px, " + matrix.f + "px) " + transforms;
+            style.webkitTransform = transformText;
         }
     },
 
