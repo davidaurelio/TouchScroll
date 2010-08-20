@@ -1,27 +1,26 @@
-.-ts-bar {
-	width: 100%;
-	height: 100%;
-	overflow: hidden;
-}
-
-.-ts-bar-e {
-	height: 6px;
-}
-
-.-ts-bar-f {
-	float: right;
-	width: 6px;
-}
-
-.-ts-bars-both {
-	padding-bottom: 12px;
-	padding-right: 12px;
-}
-
-.-ts-bars-both .-ts-bar-e {
-	-webkit-transform: translateY(9px);
-}
-
-.-ts-bars-both .-ts-bar-f {
-	-webkit-transform: translateX(3px);
-}
+/*.-ts-bar {*/
+/*	width: 100%;*/
+/*	height: 100%;*/
+/*	overflow: hidden;*/
+/*}*/
+/**/
+/*.-ts-bar-e {*/
+/*	height: 6px;*/
+/*}*/
+/**/
+/*.-ts-bar-f {*/
+/*	width: 6px;*/
+/*}*/
+/**/
+/*.-ts-bars-both {*/
+/*	padding-bottom: 12px;*/
+/*	padding-right: 12px;*/
+/*}*/
+/**/
+/*.-ts-bars-both .-ts-bar-e {*/
+/*	-webkit-transform: translateY(9px);*/
+/*}*/
+/**/
+/*.-ts-bars-both .-ts-bar-f {*/
+/*	-webkit-transform: translateX(3px);*/
+/*}*/

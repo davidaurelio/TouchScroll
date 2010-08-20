@@ -208,11 +208,18 @@ TouchScroll._styleSheet = (function() {
 [
     ".TouchScroll { position: relative; }",
     ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0) }",
-    ".-ts-bars { bottom: 0; display: -webkit-box; left: 0; padding: 3px; pointer-events: none; position: absolute; " +
+    ".-ts-bars { bottom: 0; left: 0; pointer-events: none; position: absolute; " +
         "opacity: 0;  right: 0; top: 0; z-index: 2147483647; -webkit-transition: opacity 250ms; }",
     ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
-    ".-ts-bar { display: none; }",
-    ".-ts-bar.active { display: block; }"
+    ".-ts-bar { display: none; position: absolute; right: 3px; bottom: 3px; }",
+    ".-ts-bar.active { display: block; }",
+    ".-ts-bar-e { height: 5px; left: 3px; }",
+    ".-ts-bar-f { width: 5px; top: 3px; }",
+    ".-ts-bars-both .-ts-bar-e { right: 8px; }",
+    ".-ts-bars-both .-ts-bar-f { bottom: 8px; }",
+    ".-ts-bar-part { background-color: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3) red;" +
+        "height: 4px; -webkit-transform-origin: left top; }",
+    ".-ts-bar-2 { height: 1px; border-width: 0 1px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
@@ -350,14 +357,14 @@ TouchScroll.prototype = {
     */
    _scrollbarTemplate : [
             '<div class="-ts-bar -ts-bar-e">',
-                '<div class="-ts-bar-1"></div>',
-                '<div class="-ts-bar-2"></div>',
-                '<div class="-ts-bar-3"></div>',
+                '<div class="-ts-bar-part -ts-bar-1"></div>',
+                '<div class="-ts-bar-part -ts-bar-2"></div>',
+                '<div class="-ts-bar-part -ts-bar-3"></div>',
             '</div>',
             '<div class="-ts-bar -ts-bar-f">',
-                '<div class="-ts-bar-1"></div>',
-                '<div class="-ts-bar-2"></div>',
-                '<div class="-ts-bar-3"></div>',
+                '<div class="-ts-bar-part -ts-bar-1"></div>',
+                '<div class="-ts-bar-part -ts-bar-2"></div>',
+                '<div class="-ts-bar-part -ts-bar-3"></div>',
             '</div>'
         ].join(""),
 
@@ -559,13 +566,21 @@ TouchScroll.prototype = {
         // hide/show scrollbars
         var bars = dom.bars;
         if (bars) {
-            var i = 0, axes = this._axes, axis, bar;
+            var i = 0, axes = this._axes, bothScrolling = true, axis, bar;
             while ((axis = axes[i++])) {
                 bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
                 if (isScrolling[axis]) {
                     bar.className += " active";
                 }
+                else {
+                    bothScrolling = true;
+                }
+            }
+
+            bars.outer.className = bars.outer.className.replace(" -ts-bars-both", "");
+            if (bothScrolling) {
+                bars.outer.className += " -ts-bars-both";
             }
 
             // calculate and apply scroll indicator sizes
