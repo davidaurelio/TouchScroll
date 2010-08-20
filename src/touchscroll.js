@@ -1138,10 +1138,9 @@ TouchScroll.prototype = {
     _setStyleOffset: function _setStyleOffset(style, matrix, timingFunc, duration,
                                               timeout, delay, transforms) {
         if (timeout) {
-            var setStyleOffset = this._setStyleOffset;
             var timeouts = this._scrollTimeouts;
             timeouts[timeouts.length] = setTimeout(function() {
-                setStyleOffset(style, matrix, timingFunc, duration, 0, delay, transforms);
+                _setStyleOffset(style, matrix, timingFunc, duration, 0, delay, transforms);
             }, timeout);
         }
         else {
