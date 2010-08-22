@@ -213,13 +213,16 @@ TouchScroll._styleSheet = (function() {
     ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
     ".-ts-bar { display: none; position: absolute; right: 3px; bottom: 3px; }",
     ".-ts-bar.active { display: block; }",
-    ".-ts-bar-e { height: 5px; left: 3px; }",
-    ".-ts-bar-f { width: 5px; top: 3px; }",
+    ".-ts-bar-e { height: 6px; left: 3px; }",
+    ".-ts-bar-f { width: 6px; top: 3px; }",
     ".-ts-bars-both .-ts-bar-e { right: 8px; }",
     ".-ts-bars-both .-ts-bar-f { bottom: 8px; }",
-    ".-ts-bar-part { background-color: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3) red;" +
-        "height: 4px; -webkit-transform-origin: left top; }",
-    ".-ts-bar-2 { height: 1px; border-width: 0 1px; }"
+    ".-ts-bar-part { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3); position: absolute; width: 4px; -webkit-transform-origin: left top; -webkit-background-origin: padding-box; }",
+    ".-ts-bar-1, .-ts-bar-3 { height: 2px; } ",
+    ".-ts-bar-1 { border-bottom-width: 0; -webkit-border-radius: 3px 3px 0 0; }",
+    ".-ts-bar-3 { border-top-width: 0; -webkit-border-radius: 0 0 3px 3px; }",
+    ".-ts-bar-2 { height: 1px; border-width: 0 1px; }",
+    ".-ts-bar-e { -webkit-transform: rotate(-90deg); -webkit-transform-origin: 3px 3px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
@@ -357,11 +360,13 @@ TouchScroll.prototype = {
     */
    _scrollbarTemplate : [
             '<div class="-ts-bar -ts-bar-e">',
-                '<div class="-ts-bar-part -ts-bar-1"></div>',
-                '<div class="-ts-bar-part -ts-bar-2"></div>',
-                '<div class="-ts-bar-part -ts-bar-3"></div>',
+                '<div class="-ts-indicator-e">',
+                    '<div class="-ts-bar-part -ts-bar-1"></div>',
+                    '<div class="-ts-bar-part -ts-bar-2"></div>',
+                    '<div class="-ts-bar-part -ts-bar-3"></div>',
+                '</div>',
             '</div>',
-            '<div class="-ts-bar -ts-bar-f">',
+            '<div class="-ts-bar -ts-bar-f -ts-indicator-f">',
                 '<div class="-ts-bar-part -ts-bar-1"></div>',
                 '<div class="-ts-bar-part -ts-bar-2"></div>',
                 '<div class="-ts-bar-part -ts-bar-3"></div>',
@@ -598,22 +603,22 @@ TouchScroll.prototype = {
                 availLength.e * offsetHeight / scrollHeight
             ), scrollHandleMinSize);
 
-            var i = 0, axes = activeAxes, matrix = new this._Matrix();
-            var axis, parts, size, scale, offset, tipSize;
+            var offsetRatios = barMetrics.offsetRatios;
+
+            var i = 0, axes = activeAxes;
+            var axis, parts, size, scale, tipSize;
             var setStyleOffset = this._setStyleOffset;
             while ((axis = axes[i++])) {
+                availLength[axis] = bar
+
                 parts = bars.parts[axis];
                 tipSize = tipSize || parts[0].offsetHeight;
                 size = barSizes[axis];
                 scale = size - tipSize * 2;
-                offset = matrix.translate(0, 0, 0);
-                offset.f = tipSize;
-                setStyleOffset(parts[1].style, offset, null, null, null, null, "scaleY(" + scale + ")");
+                setStyleOffset(parts[1].style, {e: 0, f: tipSize}, null, null, null, null, "scaleY(" + scale + ")");
 
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
-                offset = matrix.translate(0, 0, 0);
-                offset[axis] = tipSize + scale - 1;
-                setStyleOffset(parts[2].style, offset);
+                setStyleOffset(parts[2].style, {e: 0, f: tipSize + scale});
             }
             barMetrics.tipSize = tipSize;
         }
@@ -959,6 +964,10 @@ TouchScroll.prototype = {
         if (scrollbars) {
             bars.outer.innerHTML = this._scrollbarTemplate;
             var parts = bars.parts = {};
+            var indicators = bars.indicators = {
+                e: bars.outer.querySelector("-ts-indicator-e"),
+                f: bars.outer.querySelector("-ts-indicator-f")
+            };
 
             var i = 0, axes = this._axes, axis;
             while ((axis = axes[i++])) {
@@ -1114,6 +1123,22 @@ TouchScroll.prototype = {
 
         //TODO: add scrollbars
         if (dom.bars) {
+            var barMetrics = this._barMetrics;
+            /*
+                availLength: Object
+                    e: 389
+                    f: 634
+                maxOffset: Object
+                    e: 49
+                    f: 496
+                offsetRatios: Object
+                    e: 0
+                    f: 0
+                sizes: Object
+                    e: 340
+                    f: 138
+                tipSize: 3
+            */
         }
     },
 
