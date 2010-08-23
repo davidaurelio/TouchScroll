@@ -209,8 +209,9 @@ TouchScroll._styleSheet = (function() {
     ".TouchScroll { position: relative; }",
     ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0) }",
     ".-ts-bars { bottom: 0; left: 0; pointer-events: none; position: absolute; " +
-        "opacity: 0;  right: 0; top: 0; z-index: 2147483647; -webkit-transition: opacity 250ms; }",
-    ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d }",
+        "opacity: 0;  right: 0; top: 0; z-index: 2147483647; " +
+        "-webkit-transition: opacity 250ms; -webkit-transform-style: preserve-3d; }",
+    ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d; }",
     ".-ts-bar { display: none; position: absolute; right: 3px; bottom: 3px; }",
     ".-ts-bar.active { display: block; }",
     ".-ts-bar-e { height: 6px; left: 3px; }",
@@ -579,7 +580,7 @@ TouchScroll.prototype = {
                     bar.className += " active";
                 }
                 else {
-                    bothScrolling = true;
+                    bothScrolling = false;
                 }
             }
 
@@ -1141,7 +1142,8 @@ TouchScroll.prototype = {
             if (isScrolling.e) {
                 // resize if necessary
                 parts = bars.parts.e;
-                size = sizes.e - scrollbarSizeSubstractE - tipSize * 2;
+                defaultSize = sizes.e;
+                size = defaultSize - scrollbarSizeSubstractE - tipSize * 2;
                 if (size < 0) { size = 0 };
                 barOffset.f = tipSize;
                 setStyleOffset(parts[1].style, barOffset, null, null, null, null, "scaleY(" + size + ")");
@@ -1153,7 +1155,7 @@ TouchScroll.prototype = {
                 barMaxOffset = barMaxOffsets.e;
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
-                barOffset.f = indicatorOffset + (outOfBoundsAtEndE ? defaultSize - size : 0);
+                barOffset.f = indicatorOffset + (outOfBoundsAtEndE ? defaultSize - size - 2 * tipSize: 0);
                 setStyleOffset(indicators.e.style, barOffset);
             }
             if (isScrolling.f) {
@@ -1172,7 +1174,7 @@ TouchScroll.prototype = {
                 barMaxOffset = barMaxOffsets.f;
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
-                barOffset.f = indicatorOffset + (outOfBoundsAtEndF ? defaultSize - size : 0);
+                barOffset.f = indicatorOffset + (outOfBoundsAtEndF ? defaultSize - size - 2 * tipSize: 0);
                 setStyleOffset(indicators.f.style, barOffset);
             }
         }
