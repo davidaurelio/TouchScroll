@@ -600,7 +600,7 @@ TouchScroll.prototype = {
                 availLength.e * offsetWidth / scrollWidth
             ), scrollHandleMinSize);
             barSizes.f = Math.round(Math.max(
-                availLength.e * offsetHeight / scrollHeight
+                availLength.f * offsetHeight / scrollHeight
             ), scrollHandleMinSize);
 
             var offsetRatios = barMetrics.offsetRatios;
@@ -609,8 +609,6 @@ TouchScroll.prototype = {
             var axis, parts, size, scale, tipSize;
             var setStyleOffset = this._setStyleOffset;
             while ((axis = axes[i++])) {
-                availLength[axis] = bar
-
                 parts = bars.parts[axis];
                 tipSize = tipSize || parts[0].offsetHeight;
                 size = barSizes[axis];
