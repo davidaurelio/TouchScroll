@@ -1043,7 +1043,7 @@ TouchScroll.prototype = {
                                           newOffsetE : maxOffsetE - newOffsetE;
             }
             if (newOffsetF < maxOffsetF || newOffsetF > 0) {
-                isOutOfBoundsE = true;
+                isOutOfBoundsF = true;
                 scrollbarSizeSubstractF = newOffsetF >= 0 ?
                                           newOffsetF : maxOffsetF - newOffsetF;
             }
