@@ -219,8 +219,8 @@ TouchScroll._styleSheet = (function() {
     ".-ts-bars-both .-ts-bar-f { bottom: 8px; }",
     ".-ts-bar-part { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3); position: absolute; width: 4px; -webkit-transform-origin: left top; -webkit-background-origin: padding-box; }",
     ".-ts-bar-1, .-ts-bar-3 { height: 2px; } ",
-    ".-ts-bar-1 { border-bottom-width: 0; -webkit-border-radius: 3px 3px 0 0; }",
-    ".-ts-bar-3 { border-top-width: 0; -webkit-border-radius: 0 0 3px 3px; }",
+    ".-ts-bar-1 { border-bottom-width: 0; -webkit-border-top-left-radius: 3px; -webkit-border-top-right-radius: 3px; }",
+    ".-ts-bar-3 { border-top-width: 0; -webkit-border-bottom-left-radius: 3px; -webkit-border-bottom-right-radius: 3px; }",
     ".-ts-bar-2 { height: 1px; border-width: 0 1px; }",
     ".-ts-bar-e { -webkit-transform: rotate(-90deg); -webkit-transform-origin: 3px 3px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
