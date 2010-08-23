@@ -603,7 +603,13 @@ TouchScroll.prototype = {
                 availLength.f * offsetHeight / scrollHeight
             ), scrollHandleMinSize);
 
+            var maxOffset = barMetrics.maxOffset;
+            maxOffset.e = availLength.e; - barSizes.e;
+            maxOffset.f = availLength.f; - barSizes.f;
+
             var offsetRatios = barMetrics.offsetRatios;
+            offsetRatios.e = maxOffset.e / -scrollWidth;
+            offsetRatios.f = maxOffset.f / -scrollHeight;
 
             var i = 0, axes = activeAxes;
             var axis, parts, size, scale, tipSize;
@@ -963,8 +969,8 @@ TouchScroll.prototype = {
             bars.outer.innerHTML = this._scrollbarTemplate;
             var parts = bars.parts = {};
             var indicators = bars.indicators = {
-                e: bars.outer.querySelector("-ts-indicator-e"),
-                f: bars.outer.querySelector("-ts-indicator-f")
+                e: bars.outer.querySelector(".-ts-indicator-e"),
+                f: bars.outer.querySelector(".-ts-indicator-f")
             };
 
             var i = 0, axes = this._axes, axis;
@@ -1015,17 +1021,18 @@ TouchScroll.prototype = {
         var newOffsetE = newOffset.e;
         var newOffsetF = newOffset.f;
 
-        var scrollbarSizeSubstractE = 0;
-        var scrollbarSizeSubstractF = 0;
+        var isElastic = this.elastic;
 
-        if (this.elastic) {
+        if (isElastic) {
             var factor = this.config.elasticity.factorDrag;
             var scrollOffsetE = scrollOffset.e;
             var scrollOffsetF = scrollOffset.f;
+            var outOfBoundsAtEndE = scrollOffsetE < maxOffsetE;
+            var outOfBoundsAtEndF = scrollOffsetF < maxOffsetF;
 
             // whether the scroller was already beyond scroll bounds
-            var wasOutOfBoundsE = scrollOffsetE < maxOffsetE || scrollOffsetE > 0;
-            var wasOutOfBoundsF = scrollOffsetF < maxOffsetF || scrollOffsetF > 0;
+            var wasOutOfBoundsE = outOfBoundsAtEndE || scrollOffsetE > 0;
+            var wasOutOfBoundsF = outOfBoundsAtEndF || scrollOffsetF > 0;
 
             var isOutOfBoundsE = false, isOutOfBoundsF = false;
 
@@ -1039,13 +1046,9 @@ TouchScroll.prototype = {
 
             if (newOffsetE < maxOffsetE || newOffsetE > 0) {
                 isOutOfBoundsE = true;
-                scrollbarSizeSubstractE = newOffsetE >= 0 ?
-                                          newOffsetE : maxOffsetE - newOffsetE;
             }
             if (newOffsetF < maxOffsetF || newOffsetF > 0) {
                 isOutOfBoundsF = true;
-                scrollbarSizeSubstractF = newOffsetF >= 0 ?
-                                          newOffsetF : maxOffsetF - newOffsetF;
             }
 
             // whether the drag/scroll action went across scroller bounds
@@ -1114,29 +1117,64 @@ TouchScroll.prototype = {
         offsetE.f = offsetF.e = 0;
 
         var dom = this._dom;
+        var bars = dom.bars;
         var scrollers = dom.scrollers;
         var setStyleOffset = this._setStyleOffset;
         setStyleOffset(scrollers.e.style, offsetE);
         setStyleOffset(scrollers.f.style, offsetF);
 
-        //TODO: add scrollbars
-        if (dom.bars) {
+        // move and resize scrollbars
+        if (bars) {
             var barMetrics = this._barMetrics;
-            /*
-                availLength: Object
-                    e: 389
-                    f: 634
-                maxOffset: Object
-                    e: 49
-                    f: 496
-                offsetRatios: Object
-                    e: 0
-                    f: 0
-                sizes: Object
-                    e: 340
-                    f: 138
-                tipSize: 3
-            */
+            var scrollbarSizeSubstractE = isOutOfBoundsE ?
+                ~~(newOffsetE >= 0 ? newOffsetE : maxOffsetE - newOffsetE) : 0;
+            var scrollbarSizeSubstractF = isOutOfBoundsF ?
+                ~~(newOffsetF >= 0 ? newOffsetF : maxOffsetF - newOffsetF) : 0;
+
+            var parts, defaultSize, size, indicatorOffset, barMaxOffset;
+            var sizes = barMetrics.sizes;
+            var tipSize = barMetrics.tipSize;
+            var offsetRatios = barMetrics.offsetRatios;
+            var barMaxOffsets = barMetrics.maxOffset;
+            var indicators = bars.indicators;
+            var barOffset = new this._Matrix();
+            if (isScrolling.e) {
+                // resize if necessary
+                parts = bars.parts.e;
+                size = sizes.e - scrollbarSizeSubstractE - tipSize * 2;
+                if (size < 0) { size = 0 };
+                barOffset.f = tipSize;
+                setStyleOffset(parts[1].style, barOffset, null, null, null, null, "scaleY(" + size + ")");
+                barOffset.f += size;
+                setStyleOffset(parts[2].style, barOffset);
+
+                // adjust offset
+                indicatorOffset = ~~(newOffsetE * offsetRatios.e);
+                barMaxOffset = barMaxOffsets.e;
+                if (indicatorOffset < 0) { indicatorOffset = 0; }
+                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
+                barOffset.f = indicatorOffset + (outOfBoundsAtEndE ? defaultSize - size : 0);
+                setStyleOffset(indicators.e.style, barOffset);
+            }
+            if (isScrolling.f) {
+                // resize if necessary
+                parts = bars.parts.f;
+                defaultSize = sizes.f;
+                size = defaultSize - scrollbarSizeSubstractF - tipSize * 2;
+                if (size < 0) { size = 0 };
+                barOffset.f = tipSize;
+                setStyleOffset(parts[1].style, barOffset, null, null, null, null, "scaleY(" + size + ")");
+                barOffset.f += size;
+                setStyleOffset(parts[2].style, barOffset);
+
+                // adjust offset
+                indicatorOffset = ~~(newOffsetF * offsetRatios.f);
+                barMaxOffset = barMaxOffsets.f;
+                if (indicatorOffset < 0) { indicatorOffset = 0; }
+                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
+                barOffset.f = indicatorOffset + (outOfBoundsAtEndF ? defaultSize - size : 0);
+                setStyleOffset(indicators.f.style, barOffset);
+            }
         }
     },
 
