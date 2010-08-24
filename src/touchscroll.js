@@ -657,6 +657,7 @@ TouchScroll.prototype = {
         var barMetrics = this._barMetrics;
         var barSizes = barMetrics.sizes;
         var tipSize = barMetrics.tipSize;
+        var barMaxOffset = barMetrics.maxOffset;
 
         while ((snapAxis = axes[i++])) {
             var offset = scrollOffset[snapAxis];
@@ -667,13 +668,16 @@ TouchScroll.prototype = {
 
             var offsetTo = new this._Matrix();
             var snapBackLength;
+            var bounceAtEnd;
             if (offset > 0) {
                 offsetTo[snapAxis] = 0;
                 snapBackLength = offset;
+                bounceAtEnd = false;
             }
             else {
                 offsetTo[snapAxis] = minOffset;
                 snapBackLength = minOffset - offset;
+                bounceAtEnd = true;
             }
 
             var scrollerStyle = scrollers[snapAxis].style;
@@ -698,9 +702,16 @@ TouchScroll.prototype = {
                 }
 
                 var parts = bars.parts[snapAxis];
-                setStyleOffset(parts[0].style, {e: 0, f: 0}, barTimingFunc, barDuration, null, duration - barDuration);
-                setStyleOffset(parts[1].style, {e: 0, f: tipSize}, barTimingFunc, barDuration, null, duration - barDuration, "scaleY(" + scale + ")");
-                setStyleOffset(parts[2].style, {e: 0, f: tipSize + scale}, barTimingFunc, barDuration, null, duration - barDuration);
+                var barOffset = {e: 0};
+
+                barOffset.f = bounceAtEnd ? barMaxOffset[snapAxis] : 0;
+                setStyleOffset(parts[0].style, barOffset, barTimingFunc, barDuration, null, duration - barDuration);
+
+                barOffset.f += tipSize;
+                setStyleOffset(parts[1].style, barOffset, barTimingFunc, barDuration, null, duration - barDuration, "scaleY(" + scale + ")");
+
+                barOffset.f += scale;
+                setStyleOffset(parts[2].style, barOffset, barTimingFunc, barDuration, null, duration - barDuration);
             }
         }
 
