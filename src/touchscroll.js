@@ -1249,14 +1249,25 @@ TouchScroll.prototype = {
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
         var bars = dom.bars;
+        var barParts = bars && bars.parts;
         var offset = this._determineOffset();
 
-        var i = 0, axes = this._axes, axis, style, matrix;
+        var i = 0, axes = this._axes, axis, style, matrix, parts, part, j;
         while ((axis = axes[i++])) {
             style = scrollers[axis].style;
-            matrix = new this._Matrix();
+            matrix = {};
             matrix[axis] = offset[axis];
             this._setStyleOffset(style, matrix);
+            if (barParts) {
+                parts = barParts[axis];
+                j = 2;
+                do {
+                    part = parts[j];
+                    style = part.style;
+                    style.webkitTransform = window.getComputedStyle(part).webkitTransform;
+                    style.webkitTransition = "";
+                } while (j--);
+            }
         }
 
         var timeouts = this._scrollTimeouts;
