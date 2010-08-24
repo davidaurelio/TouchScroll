@@ -206,22 +206,26 @@ TouchScroll._styleSheet = (function() {
 }());
 
 [
-    ".TouchScroll { position: relative; }",
-    ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0) }",
+    ".TouchScroll { position: relative; display: -webkit-box; }",
+    ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0); " +
+        "-webkit-transform-style: preserve-3d; -webkit-box-flex: 1; position: relative; }",
+    ".-ts-inner { position: absolute; height: 100%; top: 0; right: 0; left: 0; }",
     ".-ts-bars { bottom: 0; left: 0; pointer-events: none; position: absolute; " +
-        "opacity: 0;  right: 0; top: 0; z-index: 2147483647; " +
-        "-webkit-transition: opacity 250ms; -webkit-transform-style: preserve-3d; }",
-    ".-ts-inner { float: left; min-width: 100%; -webkit-box-sizing: border-box; -webkit-transform-style: preserve-3d; }",
+        "opacity: 0; right: 0; top: 0; z-index: 2147483647; " +
+        "-webkit-transition: opacity 250ms; }",
     ".-ts-bar { display: none; position: absolute; right: 3px; bottom: 3px; }",
     ".-ts-bar.active { display: block; }",
-    ".-ts-bar-e { height: 6px; left: 3px; }",
-    ".-ts-bar-f { width: 6px; top: 3px; }",
-    ".-ts-bars-both .-ts-bar-e { right: 8px; }",
-    ".-ts-bars-both .-ts-bar-f { bottom: 8px; }",
-    ".-ts-bar-part { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3); position: absolute; width: 4px; -webkit-transform-origin: left top; -webkit-background-origin: padding-box; }",
-    ".-ts-bar-1, .-ts-bar-3 { height: 2px; } ",
-    ".-ts-bar-1 { border-bottom-width: 0; -webkit-border-top-left-radius: 3px; -webkit-border-top-right-radius: 3px; }",
-    ".-ts-bar-3 { border-top-width: 0; -webkit-border-bottom-left-radius: 3px; -webkit-border-bottom-right-radius: 3px; }",
+    ".-ts-bar-e { height: 7px; left: 3px; }",
+    ".-ts-bar-f { width: 7px; top: 3px; }",
+    ".-ts-bars-both .-ts-bar-e { right: 9px; }",
+    ".-ts-bars-both .-ts-bar-f { bottom: 9px; }",
+    ".-ts-bar-part { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) no-repeat center top; " +
+        "-webkit-background-size: 7px; position: absolute; width: 7px; " +
+        "-webkit-transform-origin: left top; -webkit-transform: translate3d(0,0,0); " +
+        "-webkit-transform-style: preserve-3d; }",
+    ".-ts-bar-1, .-ts-bar-3 { height: 3px; } ",
+    ".-ts-bar-3 { background-position: center bottom; }",
+    ".-ts-bar-2 { height: 1px; background-position: center; }",
     ".-ts-bar-2 { height: 1px; border-width: 0 1px; }",
     ".-ts-bar-e { -webkit-transform: rotate(-90deg); -webkit-transform-origin: 3px 3px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
@@ -359,15 +363,13 @@ TouchScroll.prototype = {
     * @static
     * @type {String} HTML for scrollbars. Used on instances with scrollbars.
     */
-   _scrollbarTemplate : [
+    _scrollbarTemplate : [
             '<div class="-ts-bar -ts-bar-e">',
-                '<div class="-ts-indicator-e">',
-                    '<div class="-ts-bar-part -ts-bar-1"></div>',
-                    '<div class="-ts-bar-part -ts-bar-2"></div>',
-                    '<div class="-ts-bar-part -ts-bar-3"></div>',
-                '</div>',
+                '<div class="-ts-bar-part -ts-bar-1"></div>',
+                '<div class="-ts-bar-part -ts-bar-2"></div>',
+                '<div class="-ts-bar-part -ts-bar-3"></div>',
             '</div>',
-            '<div class="-ts-bar -ts-bar-f -ts-indicator-f">',
+            '<div class="-ts-bar -ts-bar-f">',
                 '<div class="-ts-bar-part -ts-bar-1"></div>',
                 '<div class="-ts-bar-part -ts-bar-2"></div>',
                 '<div class="-ts-bar-part -ts-bar-3"></div>',
@@ -650,28 +652,65 @@ TouchScroll.prototype = {
         var i = 0, snapAxis;
         var timeout = 0;
         var setStyleOffset = this._setStyleOffset;
+
+        var bars = dom.bars;
+        var barMetrics = this._barMetrics;
+        var barSizes = barMetrics.sizes;
+        var tipSize = barMetrics.tipSize;
+
         while ((snapAxis = axes[i++])) {
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
-            var scrollerStyle = scrollers[snapAxis].style;
             if (offset >= minOffset && offset <= 0) {
                 continue;
             }
 
             var offsetTo = new this._Matrix();
-            offsetTo[snapAxis] = offset > 0 ? 0 : minOffset;
+            var snapBackLength;
+            if (offset > 0) {
+                offsetTo[snapAxis] = 0;
+                snapBackLength = offset;
+            }
+            else {
+                offsetTo[snapAxis] = minOffset;
+                snapBackLength = minOffset - offset;
+            }
+
+            var scrollerStyle = scrollers[snapAxis].style;
             setStyleOffset(scrollerStyle, offsetTo, timingFunc, duration);
 
             if (duration > timeout) {
                 timeout = duration;
             }
+
+
+            if (bars) {
+                var size = barSizes[snapAxis];
+                var scale = size - 2 * tipSize;
+                var barDuration = duration;
+                var barTimingFunc = timingFunc;
+                if (snapBackLength > scale) {
+                    var bezier = bezier || new CubicBezier(timingFunc[0], timingFunc[1], timingFunc[2], timingFunc[3]);
+                    var t = bezier.getTforY(1 - scale/snapBackLength, 1 / duration);
+                    var timeFraction = bezier.getPointForT(t).x;
+                    barDuration *= 1 - timeFraction;
+                    barTimingFunc = bezier.divideAtT(t)[1];
+                }
+
+                var parts = bars.parts[snapAxis];
+                setStyleOffset(parts[0].style, {e: 0, f: 0}, barTimingFunc, barDuration, null, duration - barDuration);
+                setStyleOffset(parts[1].style, {e: 0, f: tipSize}, barTimingFunc, barDuration, null, duration - barDuration, "scaleY(" + scale + ")");
+                setStyleOffset(parts[2].style, {e: 0, f: tipSize + scale}, barTimingFunc, barDuration, null, duration - barDuration);
+            }
         }
 
-        var scroller = this;
-        var timeouts = this._scrollTimeouts;
-        timeouts[timeouts.length] = setTimeout(function() {
-            scroller._endScroll();
-        }, timeout);
+        if (!axis) {
+            var scroller = this;
+            var timeouts = this._scrollTimeouts;
+            timeouts[timeouts.length] = setTimeout(function() {
+                scroller._endScroll();
+            }, timeout);
+        }
     },
 
     /**
@@ -969,10 +1008,6 @@ TouchScroll.prototype = {
         if (scrollbars) {
             bars.outer.innerHTML = this._scrollbarTemplate;
             var parts = bars.parts = {};
-            var indicators = bars.indicators = {
-                e: bars.outer.querySelector(".-ts-indicator-e"),
-                f: bars.outer.querySelector(".-ts-indicator-f")
-            };
 
             var i = 0, axes = this._axes, axis;
             while ((axis = axes[i++])) {
@@ -1028,12 +1063,10 @@ TouchScroll.prototype = {
             var factor = this.config.elasticity.factorDrag;
             var scrollOffsetE = scrollOffset.e;
             var scrollOffsetF = scrollOffset.f;
-            var outOfBoundsAtEndE = scrollOffsetE < maxOffsetE;
-            var outOfBoundsAtEndF = scrollOffsetF < maxOffsetF;
 
             // whether the scroller was already beyond scroll bounds
-            var wasOutOfBoundsE = outOfBoundsAtEndE || scrollOffsetE > 0;
-            var wasOutOfBoundsF = outOfBoundsAtEndF || scrollOffsetF > 0;
+            var wasOutOfBoundsE = scrollOffsetE < maxOffsetE || scrollOffsetE > 0;
+            var wasOutOfBoundsF = scrollOffsetF < maxOffsetF || scrollOffsetF > 0;
 
             var isOutOfBoundsE = false, isOutOfBoundsF = false;
 
@@ -1137,45 +1170,41 @@ TouchScroll.prototype = {
             var tipSize = barMetrics.tipSize;
             var offsetRatios = barMetrics.offsetRatios;
             var barMaxOffsets = barMetrics.maxOffset;
-            var indicators = bars.indicators;
-            var barOffset = new this._Matrix();
             if (isScrolling.e) {
-                // resize if necessary
                 parts = bars.parts.e;
+
+                // scale
                 defaultSize = sizes.e;
                 size = defaultSize - scrollbarSizeSubstractE - tipSize * 2;
-                if (size < 0) { size = 0 };
-                barOffset.f = tipSize;
-                setStyleOffset(parts[1].style, barOffset, null, null, null, null, "scaleY(" + size + ")");
-                barOffset.f += size;
-                setStyleOffset(parts[2].style, barOffset);
+                if (size < 1) { size = 1 };
 
                 // adjust offset
-                indicatorOffset = ~~(newOffsetE * offsetRatios.e);
+                indicatorOffset = ~~(newOffsetE * offsetRatios.e + .5);
                 barMaxOffset = barMaxOffsets.e;
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
-                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
-                barOffset.f = indicatorOffset + (outOfBoundsAtEndE ? defaultSize - size - 2 * tipSize: 0);
-                setStyleOffset(indicators.e.style, barOffset);
+                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
+
+                parts[0].style.webkitTransform = "translateY(" + indicatorOffset + "px)";
+                parts[1].style.webkitTransform = "translateY(" + (indicatorOffset + tipSize) + "px) scaleY(" + size + ")";
+                parts[2].style.webkitTransform = "translateY(" + (indicatorOffset + tipSize + size) + "px)";
             }
             if (isScrolling.f) {
-                // resize if necessary
                 parts = bars.parts.f;
+
+                // scale
                 defaultSize = sizes.f;
                 size = defaultSize - scrollbarSizeSubstractF - tipSize * 2;
-                if (size < 0) { size = 0 };
-                barOffset.f = tipSize;
-                setStyleOffset(parts[1].style, barOffset, null, null, null, null, "scaleY(" + size + ")");
-                barOffset.f += size;
-                setStyleOffset(parts[2].style, barOffset);
+                if (size < 1) { size = 1 };
 
                 // adjust offset
-                indicatorOffset = ~~(newOffsetF * offsetRatios.f);
+                indicatorOffset = ~~(newOffsetF * offsetRatios.f + .5);
                 barMaxOffset = barMaxOffsets.f;
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
-                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset; }
-                barOffset.f = indicatorOffset + (outOfBoundsAtEndF ? defaultSize - size - 2 * tipSize: 0);
-                setStyleOffset(indicators.f.style, barOffset);
+                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
+
+                parts[0].style.webkitTransform = "translateY(" + indicatorOffset + "px)";
+                parts[1].style.webkitTransform = "translateY(" + (indicatorOffset + tipSize) + "px) scaleY(" + size + ")";
+                parts[2].style.webkitTransform = "translateY(" + (indicatorOffset + tipSize + size) + "px)";
             }
         }
     },
