@@ -215,7 +215,8 @@ TouchScroll._styleSheet = (function() {
         "-webkit-transition: opacity 250ms; }",
     ".-ts-bar { display: none; position: absolute; right: 3px; bottom: 3px; }",
     ".-ts-bar.active { display: block; }",
-    ".-ts-bar-e { height: 7px; left: 3px; }",
+    ".-ts-bar-e { height: 7px; left: 3px; " +
+        "-webkit-transform: rotate(-90deg) translateX(-7px); -webkit-transform-origin: 0 0; }",
     ".-ts-bar-f { width: 7px; top: 3px; }",
     ".-ts-bars-both .-ts-bar-e { right: 9px; }",
     ".-ts-bars-both .-ts-bar-f { bottom: 9px; }",
@@ -227,7 +228,6 @@ TouchScroll._styleSheet = (function() {
     ".-ts-bar-3 { background-position: center bottom; }",
     ".-ts-bar-2 { height: 1px; background-position: center; }",
     ".-ts-bar-2 { height: 1px; border-width: 0 1px; }",
-    ".-ts-bar-e { -webkit-transform: rotate(-90deg); -webkit-transform-origin: 3px 3px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
