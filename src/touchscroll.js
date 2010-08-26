@@ -829,9 +829,13 @@ TouchScroll.prototype = {
 
         var dom = this._dom;
         var scrollers = dom.scrollers;
+        var bars = dom.bars;
 
         var scrollOffset = this._scrollOffset;
         var maxOffset = this._maxOffset;
+
+        var barMetrics = this._barMetrics;
+        var offsetRatios = barMetrics.offsetRatios;
 
         var tf = config.flicking.timingFunc;
         var timingFunc = new CubicBezier(tf[0], tf[1], tf[2], tf[3]);
