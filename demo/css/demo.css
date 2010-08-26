@@ -176,7 +176,7 @@ h1 {
 
 .scroller {
 	-webkit-box-flex: 1;
-	display: none;
+	/*display: none;*/
 	overflow: hidden;
 	padding: 1em;
 }

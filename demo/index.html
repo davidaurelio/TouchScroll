@@ -108,6 +108,59 @@
 <script src="../src/touchscroll.js"></script>
 <script src="../lib/css-beziers/src/css-beziers.js"></script>
 <script>
+
+
+//var isLandscape;
+//function changeCoords(o) {
+//	var x = o.pageX, y = o.pageY;
+//	o.pageX = y, o.pageY = x;
+//	alert([x,y,o.pageX,o.pageY]);
+//}
+//function coords(event) {
+//	changeCoords(event);
+//	if (event.touches && event.touches.length) {
+//		Array.prototype.forEach.call(event.touches, changeCoords);
+//	}
+//}
+//window.onorientationchange = function(e) {
+//	isLandscape = !!(orientation % 180);
+//	var width = window.innerWidth, height = window.innerHeight;
+//	if (isLandscape) {
+//		var tmp = width;
+//		width = height;
+//		height = tmp;
+//	}
+//
+//	var de = document.documentElement;
+//	var st = de.style;
+//	st.height = height + "px";
+//	st.width = width + "px";
+//	st.webkitTransformOrigin = Array(3).join(Math.min(height, width)/2 + "px ");
+//	st.webkitTransform = isLandscape ? "rotate(-90deg)" : "";
+//
+//	["touchstart", "touchmove", "touchend"].forEach(function(type) {
+//		document[isLandscape ? "addEventListener" : "removeEventListener"](type, coords, true);
+//	});
+//
+//
+//	function getObj(path, root) {
+//		var val = root || window;
+//		var names = path.split("."), num = names.length, i = 0;
+//		do {
+//			console.log(names[i],val[names[i]])
+//			val = val[names[i]];
+//		} while (++i < num && val);
+//		return val;
+//	}
+//};
+//
+//document.documentElement.addEventListener("touchstart", function(event){
+//t = event.touches[0]
+//	alert([t.pageX,t.pageY]);
+//	}, false)
+
+
+
 (function(){
 	var scrollers = window.scrollers = {};
 
@@ -123,7 +176,7 @@
 		Array.prototype.forEach.call(document.querySelectorAll("#demo .scroller"), function(screen){
 			screen.style.display = "none";
 		});
-		activeScreen.style.display = "block";
+		activeScreen.style.display = "";
 
 		scrollers[screenId].setupScroller(true);
 	}
