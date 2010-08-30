@@ -1395,6 +1395,7 @@ TouchScroll.prototype = {
                         timingFunc;
 
                 style.webkitTransitionDuration = (spec.duration || 0) + "ms";
+                style.webkitTransitionTimingFunction = timingFunc;
                 style.webkitTransitionDelay = (spec.delay || 0) + "ms";
                 style.webkitTransform = spec.useMatrix ?
                     matrix : "translate(" + matrix.e + "px, " + matrix.f + "px) ";
