@@ -618,6 +618,7 @@ TouchScroll.prototype = {
             var axis, parts, size, scale, tipSize, offset;
             var offsetSpecs = [];
             var scrollOffset = this._scrollOffset;
+            var barMatrix, zeroMatrix = new this._Matrix();
             while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
                 tipSize = tipSize || parts[0].offsetHeight;
@@ -625,6 +626,8 @@ TouchScroll.prototype = {
                 scale = size - tipSize * 2;
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
                 offset = offsetRatios[axis] * scrollOffset[axis];
+                barMatrix = zeroMatrix.translate(0, offset + tipSize, 0);
+                barMatrix.d = scale;
                 offsetSpecs.push(
                     {
                         style: parts[0].style,
@@ -632,8 +635,8 @@ TouchScroll.prototype = {
                     },
                     {
                         style: parts[1].style,
-                        matrix: {e: 0, f: offset + tipSize},
-                        transforms: "scaleY(" + scale + ")"
+                        matrix: barMatrix,
+                        useMatrix: true
                     },
                     {
                         style: parts[2].style,
@@ -667,12 +670,14 @@ TouchScroll.prototype = {
 
         var i = 0, snapAxis;
         var timeout = 0;
+        var zeroMatrix = new this._Matrix();
 
         var bars = dom.bars;
         var barMetrics = this._barMetrics;
         var barSizes = barMetrics.sizes;
         var tipSize = barMetrics.tipSize;
         var barMaxOffset = barMetrics.maxOffset;
+        var barMatrix;
 
         var offsetSpecs = [];
 
@@ -683,7 +688,7 @@ TouchScroll.prototype = {
                 continue;
             }
 
-            var offsetTo = new this._Matrix();
+            var offsetTo = zeroMatrix.translate(0, 0, 0);
             var snapBackLength;
             var bounceAtEnd;
             if (offset > 0) {
@@ -734,13 +739,15 @@ TouchScroll.prototype = {
                 };
 
                 barOffsetF += tipSize;
+                barMatrix = zeroMatrix.translate(0, barOffsetF, 0);
+                barMatrix.d = scale;
                 offsetSpecs[offsetSpecs.length] = {
                     style: parts[1].style,
-                    matrix: {e: 0, f: barOffsetF},
+                    matrix: barMatrix,
                     timingFunc: barTimingFunc,
                     duration: barDuration,
                     delay: barDelay,
-                    transforms: "scaleY(" + scale + ")"
+                    useMatrix: true
                 };
 
                 barOffsetF += scale;
@@ -1240,7 +1247,7 @@ TouchScroll.prototype = {
             var tipSize = barMetrics.tipSize;
             var offsetRatios = barMetrics.offsetRatios;
             var barMaxOffsets = barMetrics.maxOffset;
-            var parts0Style, parts1Style, parts2Style;
+            var barMatrix, zeroMatrix = new this._Matrix();
             var i = 2;
             if (isScrolling.e) {
                 parts = bars.parts.e;
@@ -1260,14 +1267,18 @@ TouchScroll.prototype = {
                     style: parts[0].style,
                     matrix: {e: 0, f: indicatorOffset}
                 };
+
+                barMatrix = zeroMatrix(0, indicatorOffset + tipSize, 0);
+                barMatrix.d = size;
                 offsetSpecs[i++] = {
                     style: parts[1].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize}
+                    matrix: barMatrix,
+                    useMatrix: true
                 };
+
                 offsetSpecs[i++] = {
                     style: parts[2].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize + size},
-                    transforms: "scaleY(" + size + ")"
+                    matrix: {e: 0, f: indicatorOffset + tipSize + size}
                 };
             }
             if (isScrolling.f) {
@@ -1288,14 +1299,18 @@ TouchScroll.prototype = {
                     style: parts[0].style,
                     matrix: {e: 0, f: indicatorOffset}
                 };
+
+                barMatrix = zeroMatrix.translate(0, indicatorOffset + tipSize, 0);
+                barMatrix.d = size;
                 offsetSpecs[i++] = {
                     style: parts[1].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize}
+                    matrix: barMatrix,
+                    useMatrix: true
                 };
+
                 offsetSpecs[i++] = {
                     style: parts[2].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize + size},
-                    transforms: "scaleY(" + size + ")"
+                    matrix: {e: 0, f: indicatorOffset + tipSize + size}
                 };
             }
         }
@@ -1320,7 +1335,8 @@ TouchScroll.prototype = {
      *          Non-arrays will be converted to strings.
      *      {Number} [duration] Miliseconds
      *      {Number} [delay] The `transition-delay` to apply in miliseconds.
-     *      {String} [transforms] Additional transforms to apply.
+     *      {Boolean} [useMatrix] Whether to use the whole matrix or only the
+     *          translation values (which is faster). Defaults to false.
      *
      * @param {Number} [timeout] A timeout length to use for style application in miliseconds.
      */
@@ -1332,7 +1348,7 @@ TouchScroll.prototype = {
             }, timeout);
         }
         else {
-            var style, matrix, timingFunc, duration, delay, transforms, transformText;
+            var style, matrix, timingFunc;
             var spec, i = 0;
             while ((spec = specs[i++])) {
                 style = spec.style;
@@ -1341,12 +1357,11 @@ TouchScroll.prototype = {
                 timingFunc = timingFunc && timingFunc.join ?
                         "cubic-bezier(" + timingFunc.join(",") + ")" :
                         timingFunc;
-                transforms = transforms || "";
 
-                transformText = "translate(" + matrix.e + "px, " + matrix.f + "px) " + transforms;
-                style.webkitTransitionDuration = (duration || 0) + "ms";
-                style.webkitTransitionDelay = (delay || 0) + "ms";
-                style.webkitTransform = transformText;
+                style.webkitTransitionDuration = (spec.duration || 0) + "ms";
+                style.webkitTransitionDelay = (spec.delay || 0) + "ms";
+                style.webkitTransform = spec.useMatrix ?
+                    matrix : "translate(" + matrix.e + "px, " + matrix.f + "px) ";
             }
 
         }
