@@ -1407,6 +1407,11 @@ TouchScroll.prototype = {
      * Stops all running animations.
      */
     _stopAnimations: function _stopAnimations() {
+        var timeouts = this._scrollTimeouts;
+        for (var i = 0, len = timeouts.length; i < len; i++) {
+            clearTimeout(timeouts[i]);
+        }
+
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
         var bars = dom.bars;
@@ -1414,26 +1419,29 @@ TouchScroll.prototype = {
         var offset = this._determineOffset();
 
         var i = 0, axes = this._axes, axis, style, matrix, parts, part, j;
+        var offsetSpecs = [], k = 0;
         while ((axis = axes[i++])) {
-            style = scrollers[axis].style;
-            matrix = {};
+            matrix = new this._Matrix();
             matrix[axis] = offset[axis];
-            this._setStyleOffset(style, matrix);
+            offsetSpecs[k++] = {
+                style: style = scrollers[axis].style,
+                matrix: matrix
+            };
             if (barParts) {
                 parts = barParts[axis];
                 j = 2;
                 do {
                     part = parts[j];
                     style = part.style;
-                    style.webkitTransform = window.getComputedStyle(part).webkitTransform;
                     style.webkitTransition = "";
+                    offsetSpecs[k++] = {
+                        style: style,
+                        matrix: window.getComputedStyle(part).webkitTransform,
+                        useMatrix: j == 1
+                    };
                 } while (j--);
             }
         }
-
-        var timeouts = this._scrollTimeouts;
-        for (var i = 0, len = timeouts.length; i < len; i++) {
-            clearTimeout(timeouts[i]);
-        }
+        this._setStyleOffset(offsetSpecs);
     }
 };
