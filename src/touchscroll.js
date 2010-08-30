@@ -759,7 +759,6 @@ TouchScroll.prototype = {
                     delay: barDelay
                 };
             }
-
             this._setStyleOffset(offsetSpecs);
         }
 
@@ -906,7 +905,10 @@ TouchScroll.prototype = {
         var zeroMatrix = new this._Matrix();
 
         var maxDuration = 0;
-        var setStyleOffset = this._setStyleOffset;
+
+        var offsetSpecsFlick = [];
+        var offsetSpecsBounce = [];
+        var offsetSpecsSnapBack = [];
 
         // flick for every axis
         var i = 0, axes = this._activeAxes, axis;
@@ -982,30 +984,63 @@ TouchScroll.prototype = {
             var scrollerStyle = scrollers[axis].style;
             var barParts = bars && bars.parts[axis];
             // flick
-            setStyleOffset(scrollerStyle, flickMatrix, timingFuncFlick, durationFlick);
+            offsetSpecsFlick[0] = {
+                style: scrollerStyle,
+                matrix: flickMatrix,
+                timingFunc: timingFuncFlick,
+                duration: durationFlick
+            };
+            console.log(timingFuncFlick)
             if (barParts) {
-                var barOffset = {e: 0, f: flickMatrix[axis] * barOffsetRatios[axis]};
+                var barMatrix = zeroMatrix.translate(0, flickMatrix[axis] * barOffsetRatios[axis], 0);
                 var barScale = barSizes[axis] - 2 * barTipSize;
-                setStyleOffset(barParts[0].style, barOffset, timingFuncFlick, durationFlick);
-                barOffset.f += barTipSize;
-                setStyleOffset(barParts[1].style, barOffset, timingFuncFlick, durationFlick, null, null, "scaleY(" + barScale + ")");
-                barOffset.f += barScale;
-                setStyleOffset(barParts[2].style, barOffset, timingFuncFlick, durationFlick);
+                offsetSpecsFlick[1] = {
+                    style: barParts[0].style,
+                    matrix: barMatrix,
+                    timingFunc: timingFuncFlick,
+                    duration: durationFlick
+                };
+
+                barMatrix = barMatrix.translate(0, barScale + barTipSize, 0);
+                offsetSpecsFlick[2] = {
+                    style: barParts[2].style,
+                    matrix: barMatrix,
+                    timingFunc: timingFuncFlick,
+                    duration: durationFlick
+                };
+
+                barMatrix = barMatrix.translate(0, -barScale, 0);
+                barMatrix.d = barScale;
+                offsetSpecsFlick[3] = {
+                    style: barParts[1].style,
+                    matrix: barMatrix,
+                    timingFunc: timingFuncFlick,
+                    duration: durationFlick,
+                    useMatrix: true
+                };
             }
+
 
             if (isElastic) {
                 // bounce
-                this._setStyleOffset(scrollerStyle,
-                                     bounceMatrix,
-                                     timingFuncBounce,
-                                     durationBounce,
-                                     durationFlick);
+                offsetSpecsBounce[0] = {
+                    style: scrollerStyle,
+                    matrix: bounceMatrix,
+                    timingFunc: timingFuncBounce,
+                    duration: durationBounce
+                };
+
+                this._setStyleOffset(offsetSpecsBounce, durationFlick);
+
                 // snapback
-                this._setStyleOffset(scrollerStyle,
-                                     flickMatrix,
-                                     timingFuncSnapBack,
-                                     durationSnapBack,
-                                     durationFlick + durationBounce);
+                offsetSpecsSnapBack[0] = {
+                    style: scrollerStyle,
+                    matrix: flickMatrix,
+                    timingFunc: timingFuncSnapBack,
+                    duration: durationSnapBack
+                };
+
+                this._setStyleOffset(offsetSpecsSnapBack, durationFlick + durationBounce)
             }
 
             var animDuration = durationFlick + durationBounce + durationSnapBack;
@@ -1013,6 +1048,7 @@ TouchScroll.prototype = {
                 maxDuration = animDuration;
             }
         }
+        this._setStyleOffset(offsetSpecsFlick);
 
         var scroller = this;
         var timeouts = this._scrollTimeouts;
