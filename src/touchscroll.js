@@ -220,8 +220,9 @@ TouchScroll._styleSheet = (function() {
     ".-ts-bar-f { width: 7px; top: 3px; }",
     ".-ts-bars-both .-ts-bar-e { right: 9px; }",
     ".-ts-bars-both .-ts-bar-f { bottom: 9px; }",
+    ".-ts-indicator-e, .-ts-indicator-f, .-ts-bar-part { position: absolute; }",
     ".-ts-bar-part { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) no-repeat center top; " +
-        "-webkit-background-size: 7px; position: absolute; width: 7px; " +
+        "-webkit-background-size: 7px; width: 7px; " +
         "-webkit-transform-origin: left top; -webkit-transform: translate3d(0,0,0); " +
         "-webkit-transform-style: preserve-3d; }",
     ".-ts-bar-1, .-ts-bar-3 { height: 3px; } ",
@@ -365,11 +366,13 @@ TouchScroll.prototype = {
     */
     _scrollbarTemplate : [
             '<div class="-ts-bar -ts-bar-e">',
-                '<div class="-ts-bar-part -ts-bar-1"></div>',
-                '<div class="-ts-bar-part -ts-bar-2"></div>',
-                '<div class="-ts-bar-part -ts-bar-3"></div>',
+                '<div class="-ts-indicator-e">',
+                    '<div class="-ts-bar-part -ts-bar-1"></div>',
+                    '<div class="-ts-bar-part -ts-bar-2"></div>',
+                    '<div class="-ts-bar-part -ts-bar-3"></div>',
+                '</div>',
             '</div>',
-            '<div class="-ts-bar -ts-bar-f">',
+            '<div class="-ts-bar -ts-bar-f -ts-indicator-f">',
                 '<div class="-ts-bar-part -ts-bar-1"></div>',
                 '<div class="-ts-bar-part -ts-bar-2"></div>',
                 '<div class="-ts-bar-part -ts-bar-3"></div>',
@@ -415,10 +418,10 @@ TouchScroll.prototype = {
             return;
         }
 
+        this._stopAnimations();
         this.setupScroller();
         this._isTracking = true;
         this._scrollBegan = false;
-        this._stopAnimations();
 
         event = event.touches && event.touches.length ? event.touches[0] : event;
         this._lastEvents[1] = {
@@ -469,7 +472,6 @@ TouchScroll.prototype = {
                 timeStamp: event.timeStamp
             };
         }
-
     },
 
     onTouchEnd: function onTouchEnd(event) {
@@ -626,11 +628,11 @@ TouchScroll.prototype = {
                 scale = size - tipSize * 2;
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
                 offset = offsetRatios[axis] * scrollOffset[axis];
-                barMatrix = zeroMatrix.translate(0, offset + tipSize, 0);
+                barMatrix = zeroMatrix.translate(0, tipSize, 0);
                 barMatrix.d = scale;
                 offsetSpecs.push(
                     {
-                        style: parts[0].style,
+                        style: parts[3].style,
                         matrix: {e: 0, f: offset}
                     },
                     {
@@ -640,7 +642,7 @@ TouchScroll.prototype = {
                     },
                     {
                         style: parts[2].style,
-                        matrix: {e: 0, f: offset + tipSize + scale}
+                        matrix: {e: 0, f: tipSize + scale}
                     }
                 );
 
@@ -731,14 +733,14 @@ TouchScroll.prototype = {
                 var barDelay = duration - barDuration;
                 var barOffsetF = bounceAtEnd ? barMaxOffset[snapAxis] : 0;
                 offsetSpecs[offsetSpecs.length] = {
-                    style: parts[0].style,
+                    style: parts[3].style,
                     matrix: {e: 0, f: barOffsetF},
                     timingFunc: barTimingFunc,
                     duration: barDuration,
                     delay: barDelay
                 };
 
-                barOffsetF += tipSize;
+                barOffsetF = tipSize;
                 barMatrix = zeroMatrix.translate(0, barOffsetF, 0);
                 barMatrix.d = scale;
                 offsetSpecs[offsetSpecs.length] = {
@@ -769,6 +771,8 @@ TouchScroll.prototype = {
                 scroller._endScroll();
             }, timeout);
         }
+
+
     },
 
     /**
@@ -990,36 +994,16 @@ TouchScroll.prototype = {
                 timingFunc: timingFuncFlick,
                 duration: durationFlick
             };
-            console.log(timingFuncFlick)
+            //console.log(timingFuncFlick.toString())
             if (barParts) {
-                var barMatrix = zeroMatrix.translate(0, flickMatrix[axis] * barOffsetRatios[axis], 0);
                 var barScale = barSizes[axis] - 2 * barTipSize;
                 offsetSpecsFlick[1] = {
-                    style: barParts[0].style,
-                    matrix: barMatrix,
+                    style: barParts[3].style,
+                    matrix: {e: 0, f: ~~(flickMatrix[axis] * barOffsetRatios[axis])},
                     timingFunc: timingFuncFlick,
                     duration: durationFlick
-                };
-
-                barMatrix = barMatrix.translate(0, barScale + barTipSize, 0);
-                offsetSpecsFlick[2] = {
-                    style: barParts[2].style,
-                    matrix: barMatrix,
-                    timingFunc: timingFuncFlick,
-                    duration: durationFlick
-                };
-
-                barMatrix = barMatrix.translate(0, -barScale, 0);
-                barMatrix.d = barScale;
-                offsetSpecsFlick[3] = {
-                    style: barParts[1].style,
-                    matrix: barMatrix,
-                    timingFunc: timingFuncFlick,
-                    duration: durationFlick,
-                    useMatrix: true
                 };
             }
-
 
             if (isElastic) {
                 // bounce
@@ -1127,7 +1111,8 @@ TouchScroll.prototype = {
                 parts[axis] = [
                     bar.querySelector(".-ts-bar-1"),
                     bar.querySelector(".-ts-bar-2"),
-                    bar.querySelector(".-ts-bar-3")
+                    bar.querySelector(".-ts-bar-3"),
+                    bars.outer.querySelector(".-ts-indicator-" + axis)
                 ];
             }
         }
@@ -1300,11 +1285,11 @@ TouchScroll.prototype = {
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
 
                 offsetSpecs[i++] = {
-                    style: parts[0].style,
+                    style: parts[3].style,
                     matrix: {e: 0, f: indicatorOffset}
                 };
 
-                barMatrix = zeroMatrix(0, indicatorOffset + tipSize, 0);
+                barMatrix = zeroMatrix(0, tipSize, 0);
                 barMatrix.d = size;
                 offsetSpecs[i++] = {
                     style: parts[1].style,
@@ -1314,7 +1299,7 @@ TouchScroll.prototype = {
 
                 offsetSpecs[i++] = {
                     style: parts[2].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize + size}
+                    matrix: {e: 0, f: tipSize + size}
                 };
             }
             if (isScrolling.f) {
@@ -1332,11 +1317,11 @@ TouchScroll.prototype = {
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
 
                 offsetSpecs[i++] = {
-                    style: parts[0].style,
+                    style: parts[3].style,
                     matrix: {e: 0, f: indicatorOffset}
                 };
 
-                barMatrix = zeroMatrix.translate(0, indicatorOffset + tipSize, 0);
+                barMatrix = zeroMatrix.translate(0, tipSize, 0);
                 barMatrix.d = size;
                 offsetSpecs[i++] = {
                     style: parts[1].style,
@@ -1346,7 +1331,7 @@ TouchScroll.prototype = {
 
                 offsetSpecs[i++] = {
                     style: parts[2].style,
-                    matrix: {e: 0, f: indicatorOffset + tipSize + size}
+                    matrix: {e: 0, f: tipSize + size}
                 };
             }
         }
@@ -1400,7 +1385,6 @@ TouchScroll.prototype = {
                 style.webkitTransform = spec.useMatrix ?
                     matrix : "translate(" + matrix.e + "px, " + matrix.f + "px) ";
             }
-
         }
     },
 
@@ -1419,28 +1403,43 @@ TouchScroll.prototype = {
         var barParts = bars && bars.parts;
         var offset = this._determineOffset();
 
-        var i = 0, axes = this._axes, axis, style, matrix, parts, part, j;
-        var offsetSpecs = [], k = 0;
+        var barMetrics = this._barMetrics;
+        var barOffsetRatios = barMetrics.offsetRatios;
+        var barTipSize = barMetrics.tipSize;
+        var barSizes = barMetrics.sizes;
+
+        var i = 0, axes = this._axes, axis, axisOffset, style, matrix, parts, part, barSize;
+        var zeroMatrix = new this._Matrix(), barOffset;
+
+        var offsetSpecs = [], j = 0;
         while ((axis = axes[i++])) {
-            matrix = new this._Matrix();
-            matrix[axis] = offset[axis];
-            offsetSpecs[k++] = {
+            axisOffset = offset[axis];
+            matrix = zeroMatrix.translate(0, 0, 0);
+            matrix[axis] = axisOffset;
+            offsetSpecs[j++] = {
                 style: style = scrollers[axis].style,
                 matrix: matrix
             };
             if (barParts) {
                 parts = barParts[axis];
-                j = 2;
-                do {
-                    part = parts[j];
-                    style = part.style;
-                    style.webkitTransition = "";
-                    offsetSpecs[k++] = {
-                        style: style,
-                        matrix: window.getComputedStyle(part).webkitTransform,
-                        useMatrix: j == 1
-                    };
-                } while (j--);
+                barSize = barSizes[axis] - 2 * barTipSize;
+                offsetSpecs[j++] = {
+                    style: parts[3].style,
+                    matrix: {e: 0, f: ~~(axisOffset * barOffsetRatios[axis])}
+                };
+
+                barOffset = zeroMatrix.translate(0, barTipSize, 0);
+                barOffset.d = barSize;
+                offsetSpecs[j++] = {
+                    style: parts[1].style,
+                    matrix: barOffset,
+                    useMatrix: true
+                };
+
+                offsetSpecs[j++] = {
+                    style: parts[2].style,
+                    matrix: {e: 0, f: barTipSize + barSize}
+                };
             }
         }
         this._setStyleOffset(offsetSpecs);
