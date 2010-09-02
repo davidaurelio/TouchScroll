@@ -330,6 +330,7 @@ TouchScroll.prototype = {
 		orientationchange: "setupScroller",
 		webkitTransitionEnd: "onTransitionEnd",
 		DOMSubtreeModified: "setupScroller",
+		load: "setupScroller",
 
 		touchstart: "onTouchStart",
 		mousedown: "onTouchStart",
@@ -413,6 +414,7 @@ TouchScroll.prototype = {
 		// initialize event listeners
 		parentNode.addEventListener(events.start, this, false);
 		outerScroller.addEventListener("webkitTransitionEnd", this, false);
+		window.addEventListener("load", this, true);
 		outerScroller.addEventListener("DOMSubtreeModified", this, true);
 		window.addEventListener("orientationchange", this, false);
 		window.addEventListener("resize", this, false);
