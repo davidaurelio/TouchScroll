@@ -260,6 +260,7 @@ function TouchScroll(/*HTMLElement*/scrollElement, /*Object*/options){
 	this.containerSize = null;
 	this.maxSegments = {e: 1, f: 1};
 	this.currentSegment = {e: 0, f: 0};
+	this.scrollEndEvent = false;
 
 	// references to scroll div elements
 	this.scrollers = {
@@ -338,7 +339,8 @@ TouchScroll.prototype = {
 		mousemove: "onTouchMove",
 		touchend: "onTouchEnd",
 		mouseup: "onTouchEnd",
-		touchcancel: "onTouchEnd"
+		touchcancel: "onTouchEnd",
+		click: "onClick"
 	},
 
 	// Does DOM initialization needed for the scroller
@@ -418,6 +420,7 @@ TouchScroll.prototype = {
 		outerScroller.addEventListener("DOMSubtreeModified", this, true);
 		window.addEventListener("orientationchange", this, false);
 		window.addEventListener("resize", this, false);
+		outerScroller.addEventListener("click", this, true);
 	},
 
 	setupScroller: function setupScroller(debug){
@@ -575,7 +578,7 @@ TouchScroll.prototype = {
 	onTouchEnd: function onTouchEnd(event){
 		var startTarget = this._startEventTarget;
 
-		if(!this._isScrolling && startTarget == event.target){
+		if(!this._isScrolling && startTarget == event.target && hasTouchSupport){
 		/*
 			If no scroll has been made, the touchend event should trigger
 			a focus and a click (if occurring on the same node as the
@@ -632,6 +635,10 @@ TouchScroll.prototype = {
 
 				this.startFlick(flickVector, flickDuration);
 			}
+
+			// On desktop machines, store the move end event; click events are also generated, and by
+			// comparing them against move end events we can prevent clicks from being fired incorrectly.
+			if (!hasTouchSupport) this.scrollEndEvent = event;
 		}
 
 		if(!(this.isAnimating())){
@@ -647,6 +654,21 @@ TouchScroll.prototype = {
 		delete this._startEventTarget;
 		this._isScrolling = false;
 		this.__proto__.currentScroller = null;
+	},
+
+	// Click events are constructed automatically on touch end / mouse up, but can also be generated
+	// directly from the browser - including by scrolls where the cursor stayed within a single element
+	// for the duration of the scroll.  Compare click events to the last drag event and discard click events
+	// that occur as part of a scroll.
+	onClick: function onClick(event){
+		if (!this.scrollEndEvent) return;
+		if (this.scrollEndEvent.clientX == event.clientX
+			&& this.scrollEndEvent.clientY == event.clientY
+			&& Math.abs(event.timeStamp - this.scrollEndEvent.timeStamp) < 30)
+		{
+			event.stopPropagation();
+			this.scrollEndEvent = false;
+		}
 	},
 
 	onTransitionEnd: function onTransitionEnd(event){
