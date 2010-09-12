@@ -44,7 +44,7 @@ TouchScroll.config = {
          *
          * @type {Number}
          */
-        triggerThreshold: 150,
+        triggerThreshold: 250,
 
         /**
          * Friction factor (per milisecond). This factor is used to
@@ -207,9 +207,10 @@ TouchScroll._styleSheet = (function() {
 
 [
     ".TouchScroll { position: relative; display: -webkit-box; }",
+    ".TouchScroll.scrolling { -webkit-user-select: none; }",
     ".-ts-layer { -webkit-transition-property: -webkit-transform; -webkit-transform: translate3d(0, 0, 0); " +
-        "-webkit-transform-style: preserve-3d; -webkit-box-flex: 1; position: relative; }",
-    ".-ts-inner { position: absolute; height: 100%; top: 0; right: 0; left: 0; }",
+        "-webkit-transform-style: preserve-3d; position: absolute; height: 100%; top: 0; right: 0; left: 0; }",
+    ".-ts-outer { -webkit-box-flex: 1; position: relative; height: auto; }",
     ".-ts-bars { bottom: 0; left: 0; pointer-events: none; position: absolute; " +
         "opacity: 0; right: 0; top: 0; z-index: 2147483647; " +
         "-webkit-transition: opacity 250ms; }",
@@ -228,7 +229,7 @@ TouchScroll._styleSheet = (function() {
     ".-ts-bar-1, .-ts-bar-3 { height: 3px; } ",
     ".-ts-bar-3 { background-position: center bottom; }",
     ".-ts-bar-2 { height: 1px; background-position: center; }",
-    ".-ts-bar-2 { height: 1px; border-width: 0 1px; }",
+    ".-ts-bar-2 { height: 1px; border-width: 0 1px; }"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
 /**
@@ -353,8 +354,12 @@ TouchScroll.prototype = {
     * @type {String} HTML for TouchScroll instances.
     */
    _scrollerTemplate: [
-            '<div class="-ts-layer">',
-                '<div class="-ts-layer -ts-inner"></div>',
+            '<div class="-ts-layer -ts-outer">', // scrolling layer y-axis
+                '<div class="-ts-layer">', // scrolling layer x-axis
+                    '<div class="-ts-layer">', // bouncer y-axis
+                        '<div class="-ts-layer -ts-inner"></div>', // bouncer x-axis
+                    '</div>',
+                '</div>',
             '</div>',
             '<div class="-ts-bars"></div>'
         ].join(""),
@@ -457,10 +462,17 @@ TouchScroll.prototype = {
                 threshold <= -scrollOffset.e ||
                 threshold <= scrollOffset.f ||
                 threshold <= -scrollOffset.f;
+
             if (scrollBegan) {
-                // catch pointer events with the scrollbar layer
-                this._dom.bars.outer.style.pointerEvents = "auto";
+                this._dom.outer.style.webkitUserSelect = "none";
             }
+            //if (scrollBegan && TouchScroll._hasTouchSupport) {
+            //    // catch pointer events with the scrollbar layer
+            //    //this._dom.bars.outer.style.pointerEvents = "auto";
+            //    var cancelEvent = document.createEvent("TouchEvent");
+            //    cancelEvent.initTouchEvent("touchcancel", true, true, event.view);
+            //    event.target.dispatchEvent(cancelEvent);
+            //}
         }
 
         if (scrollBegan) {
@@ -479,6 +491,7 @@ TouchScroll.prototype = {
             return;
         }
 
+        event.preventDefault();
         this._isTracking = this._scrollBegan = false;
 
         // calculate flick
@@ -866,6 +879,7 @@ TouchScroll.prototype = {
      */
     _endScroll: function _endScroll() {
         this._dom.bars.outer.style.pointerEvents = "";
+        this._dom.outer.style.webkitUserSelect = "";
     },
 
     /**
@@ -1069,11 +1083,6 @@ TouchScroll.prototype = {
 
     /**
      * Initializes the DOM of the scroller.
-     *
-     * Inserts additional elements for scrolling layers and scrollbars/indicators.
-     *
-     * @private
-     * @param {Boolean} scrollbars Whether to build scrollbars.
      */
     _initDom: function _initDom(scrollbars) {
         var dom = this._dom;
@@ -1087,21 +1096,53 @@ TouchScroll.prototype = {
             children.appendChild(firstChild);
         }
 
+        this._insertNodes(scrollbars);
+
+        // register event listeners
+        var eventNames = this._eventNames;
+        scrollElement.addEventListener(eventNames.start, this);
+        scrollElement.addEventListener(eventNames.move, this);
+        scrollElement.addEventListener(eventNames.end, this);
+
+        // put original contents back into DOM
+        dom.scrollers.inner.appendChild(children);
+
+        this.setupScroller();
+    },
+
+    /**
+     * Inserts additional elements for scrolling layers and
+     * scrollbars/indicators. Also sets up references.
+     *
+     * @private
+     * @param {Boolean} scrollbars Whether to build scrollbars.
+     */
+    _insertNodes: function _insertNodes(scrollbars) {
+        var dom = this._dom;
+        var scrollElement = dom.outer;
+
         // set innerHTML from template
         scrollElement.innerHTML = this._scrollerTemplate;
 
         // setup references to scroller HTML nodes
         var scrollers = dom.scrollers = {
-            inner: scrollElement.querySelector(".-ts-inner")
-        };
-        scrollers.e = scrollers.inner.parentNode;
-        scrollers.f = scrollers.inner;
-
-        var bars = dom.bars = {
-            outer: scrollElement.querySelector(".-ts-bars")
+            inner: scrollElement.querySelector(".-ts-inner"),
+            bouncers: {}
         };
 
+        // find layers
+        var layers = scrollElement.querySelectorAll(".-ts-layer");
+        scrollers.f = layers[0];
+        scrollers.e = layers[1];
+        scrollers.bouncers.f = layers[2];
+        scrollers.bouncers.e = layers[3];
+
+        // build scrollbars
         if (scrollbars) {
+            var bars = dom.bars = {
+                outer: scrollElement.querySelector(".-ts-bars")
+            };
+
             bars.outer.innerHTML = this._scrollbarTemplate;
             var parts = bars.parts = {};
 
@@ -1116,17 +1157,6 @@ TouchScroll.prototype = {
                 ];
             }
         }
-
-        // register event listeners
-        var eventNames = this._eventNames;
-        scrollElement.addEventListener(eventNames.start, this);
-        scrollElement.addEventListener(eventNames.move, this);
-        scrollElement.addEventListener(eventNames.end, this);
-
-        // put original contents back into DOM
-        dom.scrollers.inner.appendChild(children);
-
-        this.setupScroller();
     },
 
     /**
@@ -1289,7 +1319,7 @@ TouchScroll.prototype = {
                     matrix: {e: 0, f: indicatorOffset}
                 };
 
-                barMatrix = zeroMatrix(0, tipSize, 0);
+                barMatrix = zeroMatrix.translate(0, tipSize, 0);
                 barMatrix.d = size;
                 offsetSpecs[i++] = {
                     style: parts[1].style,
@@ -1382,8 +1412,13 @@ TouchScroll.prototype = {
                 style.webkitTransitionDuration = (spec.duration || 0) + "ms";
                 style.webkitTransitionTimingFunction = timingFunc;
                 style.webkitTransitionDelay = (spec.delay || 0) + "ms";
-                style.webkitTransform = spec.useMatrix ?
-                    matrix : "translate(" + matrix.e + "px, " + matrix.f + "px) ";
+
+                var transform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
+                var scaleY = matrix.d;
+                if (scaleY != null && scaleY !== 1) {
+                    transform += " scaleY(" + scaleY + ")";
+                }
+                style.webkitTransform = transform;
             }
         }
     },
