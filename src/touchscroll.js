@@ -673,29 +673,33 @@ TouchScroll.prototype = {
      *                             both axes.
      * @returns {Boolean} Whether the scroller was beyond regular bounds.
      */
-    snapBack: function snapBack(axis) {
+    snapBack: function snapBack(axis, duration) {
         var axes = axis ? [axis] : this._activeAxes;
-        var scrollOffset = this._scrollOffset;
-        var maxOffset = this._maxOffset;
-        var dom = this._dom;
-        var scrollers = dom.scrollers;
+
         var snapBackConfig = this.config.snapBack;
-        var duration = snapBackConfig.defaultTime;
+        if (typeof duration === "undefined") { duration = snapBackConfig.defaultTime; }
         var timingFunc = snapBackConfig.timingFunc;
 
-        var i = 0, snapAxis;
-        var timeout = 0;
-        var zeroMatrix = new this._Matrix();
-
+        var dom = this._dom;
+        var bouncers = dom.scrollers.bouncers;
         var bars = dom.bars;
-        var barMetrics = this._barMetrics;
-        var barSizes = barMetrics.sizes;
-        var tipSize = barMetrics.tipSize;
-        var barMaxOffset = barMetrics.maxOffset;
-        var barMatrix;
+        var hasBars = !!bars;
 
-        var offsetSpecs = [];
+        if (hasBars) {
+            var barMetrics = this._barMetrics;
+            var barSizes = barMetrics.sizes;
+            var tipSize = barMetrics.tipSize;
+            var barMaxOffset = barMetrics.maxOffset;
+            var parts = bars.parts;
+        }
 
+        var scrollOffset = this._scrollOffset;
+        var maxOffset = this._maxOffset;
+
+        var i = 0, snapAxis;
+        var zeroOffset = {e: 0, f: 0}
+
+        var offsetSpecs = [], numOffsetSpecs = 0;
         while ((snapAxis = axes[i++])) {
             var offset = scrollOffset[snapAxis];
             var minOffset = -maxOffset[snapAxis];
@@ -703,38 +707,24 @@ TouchScroll.prototype = {
                 continue;
             }
 
-            var offsetTo = zeroMatrix.translate(0, 0, 0);
-            var snapBackLength;
-            var bounceAtEnd;
-            if (offset > 0) {
-                offsetTo[snapAxis] = 0;
-                snapBackLength = offset;
-                bounceAtEnd = false;
-            }
-            else {
-                offsetTo[snapAxis] = minOffset;
-                snapBackLength = minOffset - offset;
-                bounceAtEnd = true;
-            }
-
-            var scrollerStyle = scrollers[snapAxis].style;
-            offsetSpecs[offsetSpecs.length] = {
-                style: scrollerStyle,
-                matrix: offsetTo,
-                timingFunc: timingFunc,
-                duration: duration
+            // snap back bouncer layer
+            offsetSpecs[numOffsetSpecs++] = {
+                style: bouncers[snapAxis].style,
+                matrix: zeroOffset,
+                duration: duration,
+                timingFunc: timingFunc
             };
 
-            if (duration > timeout) {
-                timeout = duration;
-            }
+            var bounceAtEnd = offset < 0;
+            var snapBackLength = bounceAtEnd ? minOffset - offset : offset;
 
-            if (bars) {
+            // snap back bars
+            if (hasBars) {
                 var size = barSizes[snapAxis];
                 var scale = size - 2 * tipSize;
                 var barDuration = duration;
                 var barTimingFunc = timingFunc;
-                if (snapBackLength > scale) {
+                if (snapBackLength > scale && duration > 0) { // bars start growing during snap back
                     var bezier = bezier || new CubicBezier(timingFunc[0], timingFunc[1], timingFunc[2], timingFunc[3]);
                     var t = bezier.getTforY(1 - scale/snapBackLength, 1 / duration);
                     var timeFraction = bezier.getPointForT(t).x;
@@ -744,48 +734,31 @@ TouchScroll.prototype = {
 
                 var parts = bars.parts[snapAxis];
                 var barDelay = duration - barDuration;
-                var barOffsetF = bounceAtEnd ? barMaxOffset[snapAxis] : 0;
-                offsetSpecs[offsetSpecs.length] = {
-                    style: parts[3].style,
-                    matrix: {e: 0, f: barOffsetF},
-                    timingFunc: barTimingFunc,
-                    duration: barDuration,
-                    delay: barDelay
-                };
-
-                barOffsetF = tipSize;
-                barMatrix = zeroMatrix.translate(0, barOffsetF, 0);
-                barMatrix.d = scale;
-                offsetSpecs[offsetSpecs.length] = {
-                    style: parts[1].style,
-                    matrix: barMatrix,
-                    timingFunc: barTimingFunc,
-                    duration: barDuration,
+                offsetSpecs[numOffsetSpecs++] = {
+                    style: parts[0].style,
+                    matrix: {e: 0, f: 0},
                     delay: barDelay,
-                    useMatrix: true
-                };
-
-                barOffsetF += scale;
-                offsetSpecs[offsetSpecs.length] = {
-                    style: parts[2].style,
-                    matrix: {e: 0, f: barOffsetF},
-                    timingFunc: barTimingFunc,
                     duration: barDuration,
-                    delay: barDelay
+                    timingFunc: barTimingFunc
+                };
+                offsetSpecs[numOffsetSpecs++] = {
+                    style: parts[1].style,
+                    matrix: {e: 0, f: tipSize, d: scale},
+                    delay: barDelay,
+                    duration: barDuration,
+                    timingFunc: barTimingFunc
+                };
+                offsetSpecs[numOffsetSpecs++] = {
+                    style: parts[2].style,
+                    matrix: {e: 0, f: tipSize + scale},
+                    delay: barDelay,
+                    duration: barDuration,
+                    timingFunc: barTimingFunc
                 };
             }
-            this._setStyleOffset(offsetSpecs);
         }
 
-        if (!axis) {
-            var scroller = this;
-            var timeouts = this._scrollTimeouts;
-            timeouts[timeouts.length] = setTimeout(function() {
-                scroller._endScroll();
-            }, timeout);
-        }
-
-
+        this._setStyleOffset(offsetSpecs);
     },
 
     /**
@@ -857,11 +830,13 @@ TouchScroll.prototype = {
      */
     _determineOffset: function _determineOffset(round) {
         var scrollers = this._dom.scrollers;
+        var bouncers = scrollers.bouncers;
         var offset = this._scrollOffset;
 
         var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
             var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
+            axisOffset += this._getNodeOffset(bouncers[axis])[axis];
             if (round) {
                 // This is a high performance rounding method:
                 // Add 0.5 and then do a double binary inversion
