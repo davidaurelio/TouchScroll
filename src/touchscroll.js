@@ -1176,196 +1176,153 @@ TouchScroll.prototype = {
             matrix.f = 0;
         }
 
-        var maxOffset = this._maxOffset;
-        var maxOffsetE = -maxOffset.e;
-        var maxOffsetF = -maxOffset.f;
-        var scrollOffset = this._scrollOffset;
-        var newOffset = scrollOffset.multiply(matrix);
-        var newOffsetE = newOffset.e;
-        var newOffsetF = newOffset.f;
+        var maxOffset = this._maxOffset, axisMaxOffset;
+        var scrollOffset = this._scrollOffset, axisScrollOffset;
+        var newOffset = scrollOffset.multiply(matrix), axisNewOffset;
+
+        var axisBounce;
 
         var isElastic = this.elastic;
-
-        if (isElastic) {
-            var factor = this.config.elasticity.factorDrag;
-            var scrollOffsetE = scrollOffset.e;
-            var scrollOffsetF = scrollOffset.f;
-
-            // whether the scroller was already beyond scroll bounds
-            var wasOutOfBoundsE = scrollOffsetE < maxOffsetE || scrollOffsetE > 0;
-            var wasOutOfBoundsF = scrollOffsetF < maxOffsetF || scrollOffsetF > 0;
-
-            var isOutOfBoundsE = false, isOutOfBoundsF = false;
-
-            if (wasOutOfBoundsE) {
-                // if out of scroll bounds, apply the elasticity factor
-                newOffsetE -= matrix.e * (1 - factor);
-            }
-            if (wasOutOfBoundsF) {
-                newOffsetF -= matrix.f * (1 - factor);
-            }
-
-            if (newOffsetE < maxOffsetE || newOffsetE > 0) {
-                isOutOfBoundsE = true;
-            }
-            if (newOffsetF < maxOffsetF || newOffsetF > 0) {
-                isOutOfBoundsF = true;
-            }
-
-            // whether the drag/scroll action went across scroller bounds
-            var crossingBoundsE = (!wasOutOfBoundsE || !isOutOfBoundsE) &&
-                                  (isOutOfBoundsE || isOutOfBoundsE);
-            var crossingBoundsF = (!wasOutOfBoundsF || !isOutOfBoundsF) &&
-                                  (isOutOfBoundsF || isOutOfBoundsF);
-
-            if (crossingBoundsE) {
-                /*
-                    If the drag went across scroll bounds, we need to apply a
-                    "mixed strategy": The part of the drag outside the bounds
-                    is mutliplicated by the elasticity factor.
-                */
-                if (scrollOffsetE > 0) {
-                    newOffsetE /= factor;
-                }
-                else if (newOffsetE > 0) {
-                    newOffsetE *= factor;
-                }
-                else if (scrollOffsetE < maxOffsetE) {
-                    newOffsetE += (maxOffsetE - scrollOffsetE) / factor;
-                }
-                else if (newOffsetE < maxOffsetE) {
-                    newOffsetE -= (maxOffsetE - newOffsetE) * factor;
-                }
-            }
-            if (crossingBoundsF) {
-                if (scrollOffsetF > 0) {
-                    newOffsetF /= factor;
-                }
-                else if (newOffsetF > 0) {
-                    newOffsetF *= factor;
-                }
-                else if (scrollOffsetF < maxOffsetF) {
-                    newOffsetF += (maxOffsetF - scrollOffsetF) / factor;
-                }
-                else if (newOffsetF < maxOffsetF) {
-                    newOffsetF -= (maxOffsetF - newOffsetF) * factor;
-                }
-            }
-        }
-        else { // not elastic
-            // Constrain scrolling to scroller bounds
-            if (newOffsetE < maxOffsetE) {
-                newOffsetE = maxOffsetE;
-            }
-            else if (newOffsetE > 0) {
-                newOffsetE = 0;
-            }
-
-            if (newOffsetF < maxOffsetF) {
-                newOffsetF = maxOffsetF;
-            }
-            else if (newOffsetF > 0) {
-                newOffsetF = 0;
-            }
-        }
-
-        newOffset.e = newOffsetE;
-        newOffset.f = newOffsetF;
-        this._scrollOffset = newOffset;
-
-        var offsetE = newOffset.translate(0, 0, 0); // faster than creating a new WebKitCSSMatrix instance
-        var offsetF = newOffset.translate(0, 0, 0);
-        offsetE.f = offsetF.e = 0;
+        var zeroMatrix = new this._Matrix();
 
         var dom = this._dom;
-        var bars = dom.bars;
         var scrollers = dom.scrollers;
-        var offsetSpecs = [
-            {style: scrollers.e.style, matrix: offsetE},
-            {style: scrollers.f.style, matrix: offsetF}
-        ];
-
-        // move and resize scrollbars
-        if (bars) {
+        var bouncers = scrollers.bouncers;
+        var bars = dom.bars;
+        var hasBars = !!bars;
+        if (hasBars) {
             var barMetrics = this._barMetrics;
-            var scrollbarSizeSubstractE = isOutOfBoundsE ?
-                ~~(newOffsetE >= 0 ? newOffsetE : maxOffsetE - newOffsetE) : 0;
-            var scrollbarSizeSubstractF = isOutOfBoundsF ?
-                ~~(newOffsetF >= 0 ? newOffsetF : maxOffsetF - newOffsetF) : 0;
-
-            var parts, defaultSize, size, indicatorOffset, barMaxOffset;
+            var barParts = bars.parts;
             var sizes = barMetrics.sizes;
             var tipSize = barMetrics.tipSize;
             var offsetRatios = barMetrics.offsetRatios;
             var barMaxOffsets = barMetrics.maxOffset;
-            var barMatrix, zeroMatrix = new this._Matrix();
-            var i = 2;
-            if (isScrolling.e) {
-                parts = bars.parts.e;
+            var parts, defaultSize, size, indicatorOffset, barMaxOffset, barMatrix, barSizeSubstract;
+        }
 
-                // scale
-                defaultSize = sizes.e;
-                size = defaultSize - scrollbarSizeSubstractE - tipSize * 2;
-                if (size < 1) { size = 1 };
+        var offsetSpecs = [], numOffsetSpecs = 0;
 
-                // adjust offset
-                indicatorOffset = ~~(newOffsetE * offsetRatios.e + .5);
-                barMaxOffset = barMaxOffsets.e;
-                if (indicatorOffset < 0) { indicatorOffset = 0; }
-                else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
+        var bounceMatrix, bounceOffset;
+        var factor = this.config.elasticity.factorDrag;
+        var i = 0, axes = this._activeAxes, axis;
+        while ((axis = axes[i++])) {
+            axisMaxOffset = -maxOffset[axis];
+            axisScrollOffset = scrollOffset[axis];
+            axisNewOffset = newOffset[axis];
+            bounceOffset = 0;
 
-                offsetSpecs[i++] = {
-                    style: parts[3].style,
-                    matrix: {e: 0, f: indicatorOffset}
-                };
+            if (isElastic) {
+                bounceMatrix = zeroMatrix.translate(0, 0, 0);
+                axisScrollOffset = scrollOffset[axis];
 
-                barMatrix = zeroMatrix.translate(0, tipSize, 0);
-                barMatrix.d = size;
-                offsetSpecs[i++] = {
-                    style: parts[1].style,
-                    matrix: barMatrix,
-                    useMatrix: true
-                };
+                // whether the scroller was already beyond scroll bounds
+                var wasOutOfBounds = axisScrollOffset < axisMaxOffset || axisScrollOffset > 0;
+                if (wasOutOfBounds) {
+                    axisNewOffset -= matrix[axis] * (1 - factor);
+                }
 
-                offsetSpecs[i++] = {
-                    style: parts[2].style,
-                    matrix: {e: 0, f: tipSize + size}
-                };
+                var isOutOfBounds = axisNewOffset < axisMaxOffset || axisNewOffset > 0;
+
+                // whether the drag/scroll action went across scroller bounds
+                var crossingBounds = (wasOutOfBounds && !isOutOfBounds) ||
+                                     (isOutOfBounds && !wasOutOfBounds);
+
+                if (crossingBounds) {
+                    /*
+                        If the drag went across scroll bounds, we need to apply a
+                        "mixed strategy": The part of the drag outside the bounds
+                        is mutliplicated by the elasticity factor.
+                    */
+                    if (axisScrollOffset > 0) {
+                        axisNewOffset /= factor;
+                    }
+                    else if (axisNewOffset > 0) {
+                        axisNewOffset *= factor;
+                    }
+                    else if (axisScrollOffset < axisMaxOffset) {
+                        axisNewOffset += (axisMaxOffset - axisScrollOffset) / factor;
+                    }
+                    else if (axisNewOffset < axisMaxOffset) {
+                        axisNewOffset -= (axisMaxOffset - axisNewOffset) * factor;
+                    }
+                }
+
+                if (isOutOfBounds) {
+                    bounceOffset = bounceMatrix[axis] =
+                        axisNewOffset > 0 ? axisNewOffset : axisNewOffset - axisMaxOffset;
+                }
+
+                if (isOutOfBounds || wasOutOfBounds) {
+                    offsetSpecs[numOffsetSpecs++] = {
+                        style: bouncers[axis].style,
+                        matrix: bounceMatrix
+                    };
+                }
             }
-            if (isScrolling.f) {
-                parts = bars.parts.f;
 
-                // scale
-                defaultSize = sizes.f;
-                size = defaultSize - scrollbarSizeSubstractF - tipSize * 2;
-                if (size < 1) { size = 1 };
+            // Constrain scrolling to scroller bounds
+            var unlimitedNewOffset = axisNewOffset;
+            if (axisNewOffset < axisMaxOffset) { axisNewOffset = axisMaxOffset; }
+            else if (axisNewOffset > 0) { axisNewOffset = 0; }
+
+            var scrollMatrix = zeroMatrix.translate(0, 0, 0);
+            scrollMatrix[axis] = axisNewOffset;
+            offsetSpecs[numOffsetSpecs++] = {
+                style: scrollers[axis].style,
+                matrix: scrollMatrix
+            };
+
+            newOffset[axis] = isElastic ? unlimitedNewOffset : axisNewOffset;
+
+            if (hasBars) {
+                parts = barParts[axis];
 
                 // adjust offset
-                indicatorOffset = ~~(newOffsetF * offsetRatios.f + .5);
-                barMaxOffset = barMaxOffsets.f;
+                indicatorOffset = ~~(axisNewOffset * offsetRatios[axis] + .5); // round
+                barMaxOffset = barMaxOffsets[axis];
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
 
-                offsetSpecs[i++] = {
+                offsetSpecs[numOffsetSpecs++] = {
                     style: parts[3].style,
                     matrix: {e: 0, f: indicatorOffset}
                 };
 
-                barMatrix = zeroMatrix.translate(0, tipSize, 0);
-                barMatrix.d = size;
-                offsetSpecs[i++] = {
-                    style: parts[1].style,
-                    matrix: barMatrix,
-                    useMatrix: true
-                };
+                // scale
+                defaultSize = size = sizes[axis] - 2*tipSize;
+                var partsOffset = 0;
+                if (isOutOfBounds) {
+                    barSizeSubstract = bounceOffset < 0 ? -bounceOffset : bounceOffset;
+                    size -= ~~(barSizeSubstract + .5);
+                    if (size < 1) { size = 1; }
+                    if (bounceOffset < 0) {
+                        partsOffset = defaultSize - size;
+                    }
+                }
 
-                offsetSpecs[i++] = {
+                if (isOutOfBounds || wasOutOfBounds) {
+                    // upper indicator tip
+                    offsetSpecs[numOffsetSpecs++] = {
+                        style: parts[0].style,
+                        matrix: {e: 0, f: partsOffset}
+                    };
+                }
+
+                // middle indicator part
+                offsetSpecs[numOffsetSpecs++] = {
+                    style: parts[1].style,
+                    matrix: {d: size, e: 0, f: partsOffset + tipSize}
+                };
+                // indicator end
+                offsetSpecs[numOffsetSpecs++] = {
                     style: parts[2].style,
-                    matrix: {e: 0, f: tipSize + size}
+                    matrix: {e: 0, f: partsOffset + size + tipSize}
                 };
             }
         }
+
         this._setStyleOffset(offsetSpecs);
+        this._scrollOffset = newOffset;
     },
 
     /**
