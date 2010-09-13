@@ -423,6 +423,7 @@ TouchScroll.prototype = {
             return;
         }
 
+        this.snapBack(null, 0);
         this._stopAnimations();
         this.setupScroller();
         this._isTracking = true;
