@@ -239,12 +239,16 @@ TouchScroll._styleSheet = (function() {
  * @param {Objects} [options] An expando for options. Supported options are:#
  *                            - elastic {Boolean}, defaults to `false`
  *                            - scrollbars {Boolean}, defaults to `true`
+ *                            - scrollevents {Boolean}, defaults to `false`
  */
 function TouchScroll(scrollElement, options) {
     options = options || {};
 
     /** @type {Boolean} Whether the scroller bounces across its bounds. */
     this.elastic = !!options.elastic;
+
+    /** @type {Boolean} Whether to fire DOM scroll events */
+    this.scrollevents = !!options.scrollevents;
 
     /** @type {Boolean} Whether to build and use scrollbars. */
     var useScrollbars = "scrollbars" in options ?  !!options.scrollbars : true;
@@ -567,6 +571,7 @@ TouchScroll.prototype = {
                     this._endScroll();
                 }
 
+                if (this.scrollevents) { this._fireScrollEvent(); }
                 break;
             }
         }
@@ -992,6 +997,8 @@ TouchScroll.prototype = {
         var offsetSpecs = [], numOffsetSpecs = 0;
         var barResetSpecs = [], numBarResets = 0;
 
+        var maxDuration = 0;
+
         // flick for every axis
         var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
@@ -1031,6 +1038,7 @@ TouchScroll.prototype = {
 
             var durationFlick = duration * timingFunc.getPointForT(t).x;
             var durationBounce = duration - durationFlick;
+            if (durationFlick > maxDuration) { maxDuration = durationFlick; }
 
             if (isElastic && distanceBounce) {
                 durationBounce *= configBounceFactor;
@@ -1140,6 +1148,26 @@ TouchScroll.prototype = {
         }
         this._setStyleOffset(barResetSpecs);
         this._setStyleOffset(offsetSpecs);
+
+        if (this.scrollevents && maxDuration) {
+            var that = this;
+            var iterations = 0;
+            var interval = setInterval(function() {
+                if (++iterations * 100 < maxDuration) {
+                    that._fireScrollEvent();
+                }
+                else {
+                    clearInterval(interval);
+                }
+            }, 100);
+        }
+    },
+
+    _fireScrollEvent: function _fireScrollEvent() {
+        var scrollEvent = document.createEvent("Event");
+        scrollEvent.touchscroll = this;
+        scrollEvent.initEvent("scroll", true, false);
+        this._dom.outer.dispatchEvent(scrollEvent);
     },
 
     /**
@@ -1411,6 +1439,9 @@ TouchScroll.prototype = {
 
         this._setStyleOffset(offsetSpecs);
         this._scrollOffset = newOffset;
+        if (this.scrollevents && offsetSpecs.length) {
+            this._fireScrollEvent();
+        }
     },
 
     /**
