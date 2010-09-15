@@ -571,11 +571,20 @@ TouchScroll.prototype = {
         }
     },
 
+
+    scrollBy: function scrollBy(e, f, duration) {
+        var scrollMatrix = this._determineOffset(true).inverse().translate(e, f, 0);
+        return this.scrollTo(scrollMatrix.e, scrollMatrix.f, duration);
+    },
+
     scrollTo: function scrollTo(e, f, duration) {
-        var scrollOffset = this._scrollOffset;
-        var scrollMatrix = new this._Matrix();
-        scrollMatrix.e = -e - scrollOffset.e;
-        scrollMatrix.f = -f - scrollOffset.f ;
+        if (duration <= 0) {
+            // limit to bounds if not flicking
+            var maxOffset = this._maxOffset;
+            e = Math.max(Math.min(e, maxOffset.e), 0);
+            f = Math.max(Math.min(f, maxOffset.f), 0);
+        }
+        var scrollMatrix = this._scrollOffset.translate(e, f, 0).inverse();
 
         if (duration > 0) {
             this._flick(duration, scrollMatrix);
