@@ -399,7 +399,8 @@ TouchScroll.prototype = {
         mouseup: "onTouchEnd",
         touchcancel: "onTouchEnd",
         webkitTransitionEnd: "onTransitionEnd",
-        DOMSubtreeModified: "setupScroller"
+        DOMSubtreeModified: "setupScroller",
+        focus: "onChildFocused"
     },
 
     /**
@@ -480,6 +481,36 @@ TouchScroll.prototype = {
         var bars = this._dom.bars;
         if (bars) {
             bars.outer.className = "-ts-bars";
+        }
+    },
+
+    onChildFocused: function onChildFocused(event) {
+        var innerScroller = this._dom.scrollers.inner;
+        var node = event.target;
+        if (node === innerScroller) {
+            return;
+        }
+
+        var offsetLeft = 0, offsetTop = 0;
+        do {
+            offsetLeft += node.offsetLeft;
+            offsetTop += node.offsetTop;
+            node = node.offsetParent;
+        } while (node !== innerScroller);
+
+        var offset = this._scrollOffset.inverse();
+        var m = this._metrics;
+
+        // if element not visible scroll there
+        var doScroll = false, scrollE = offset.e, scrollF = offset.f;
+        var visibleHorizontal = offsetLeft > scrollE && offsetLeft < scrollE + m.offsetWidth;
+        var visibleVertical = offsetTop > scrollF && offsetTop < scrollF + m.offsetHeight;
+
+        if (!visibleHorizontal) { scrollE = offsetLeft; doScroll = true; }
+        if (!visibleVertical) { scrollF = offsetTop; doScroll = true; }
+
+        if (doScroll) {
+            this.scrollTo(offsetLeft, offsetTop, 100);
         }
     },
 
