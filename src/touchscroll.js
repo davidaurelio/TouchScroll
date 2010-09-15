@@ -558,7 +558,7 @@ TouchScroll.prototype = {
                 if (isBouncer) {
                     this.snapBack(axis);
                 }
-                if (0 === this._numTransitions--) {
+                if (0 === --this._numTransitions) {
                     this._endScroll();
                 }
 
