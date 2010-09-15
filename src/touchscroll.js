@@ -341,7 +341,8 @@ TouchScroll.prototype = {
         touchend: "onTouchEnd",
         mouseup: "onTouchEnd",
         touchcancel: "onTouchEnd",
-        webkitTransitionEnd: "onTransitionEnd"
+        webkitTransitionEnd: "onTransitionEnd",
+        DOMSubtreeModified: "setupScroller"
     },
 
     /**
