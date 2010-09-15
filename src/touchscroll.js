@@ -596,6 +596,13 @@ TouchScroll.prototype = {
 
     /**
      * Sets up the scroller according to its metrics.
+     *
+     * This method does nothing if offsetWidth/Height and scrollWidth/Height
+     * are unchanged.
+     *
+     * @param {Boolean} force Whether to force the setup.
+     * @returns {Boolean} Whether setup has run. False, if skipped due to
+     *                    unchanged metrics.
      */
     setupScroller: function setupScroller(force) {
         var dom = this._dom;
@@ -612,7 +619,7 @@ TouchScroll.prototype = {
             offsetWidth === m.offsetWidth && offsetHeight === m.offsetHeight &&
             scrollWidth === m.scrollWidth && scrollHeight === m.scrollHeight
         ) {
-                return;
+                return false;
         }
 
         m.offsetWidth = offsetWidth;
@@ -622,8 +629,8 @@ TouchScroll.prototype = {
 
         // instance properties
         var maxOffset = this._maxOffset = {
-            e: Math.max(scrollWidth - offsetWidth),
-            f: Math.max(scrollHeight - offsetHeight)
+            e: Math.max(scrollWidth - offsetWidth, 0),
+            f: Math.max(scrollHeight - offsetHeight, 0)
         };
 
         var isScrolling = this._isScrolling = {
@@ -636,10 +643,30 @@ TouchScroll.prototype = {
             return isScrolling[axis];
         });
 
+        // force scrollers into bounds
+        var offsetSpecs = [];
+        var scrollOffset = this._scrollOffset;
+        var scrollers = dom.scrollers, zeroMatrix = new this._Matrix(), matrix;
+        var i = 0, axes = this._axes, axis;
+        while ((axis = axes[i++])) {
+            var axisOffset = scrollOffset[axis];
+            var axisMinOffset = -maxOffset[axis];
+            if (axisOffset > 0 || axisOffset < axisMinOffset) {
+                scrollOffset[axis] = axisOffset = axisOffset > 0 ? 0 : axisMinOffset;
+                var matrix = zeroMatrix.translate(0, 0, 0);
+                matrix[axis] = axisOffset;
+                offsetSpecs[offsetSpecs.length] = {
+                    style: scrollers[axis].style,
+                    matrix: matrix
+                };
+            }
+        }
+
         // hide/show scrollbars
         var bars = dom.bars;
         if (bars) {
-            var i = 0, axes = this._axes, bothScrolling = true, axis, bar;
+            var bothScrolling = true, bar;
+            i = 0;
             while ((axis = axes[i++])) {
                 bar = bars[axis];
                 bar.className = bar.className.replace(" active", "");
@@ -671,6 +698,8 @@ TouchScroll.prototype = {
                 availLength.f * offsetHeight / scrollHeight
             ), scrollHandleMinSize);
 
+            var tipSize = barMetrics.tipSize;
+
             var maxOffset = barMetrics.maxOffset;
             maxOffset.e = availLength.e; - barSizes.e;
             maxOffset.f = availLength.f; - barSizes.f;
@@ -680,10 +709,8 @@ TouchScroll.prototype = {
             offsetRatios.f = maxOffset.f / -scrollHeight;
 
             var i = 0, axes = activeAxes;
-            var axis, parts, size, scale, tipSize, offset;
-            var offsetSpecs = [];
-            var scrollOffset = this._scrollOffset;
-            var barMatrix, zeroMatrix = new this._Matrix();
+            var axis, parts, size, scale, offset;
+            var barMatrix;
             while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
                 tipSize = tipSize || parts[0].offsetHeight;
@@ -711,8 +738,10 @@ TouchScroll.prototype = {
 
             }
             barMetrics.tipSize = tipSize;
-            this._setStyleOffset(offsetSpecs);
         }
+        this._setStyleOffset(offsetSpecs);
+
+        return true;
     },
 
     showScrollbars: function showScrollbars() {
