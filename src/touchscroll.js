@@ -558,12 +558,10 @@ TouchScroll.prototype = {
         var axes = this._axes;
 
         var i = 0, axis;
-        var isScroller, isBouncer, endScroll = false;
         while ((axis = axes[i++])) {
-            isScroller = target === scrollers[axis];
-            isBouncer = target === bouncers[axis];
+            var isBouncer = target === bouncers[axis];
 
-            if (isScroller || isBouncer) {
+            if (isBouncer || target === scrollers[axis]) {
                 if (isBouncer) {
                     this.snapBack(axis);
                 }
@@ -572,7 +570,7 @@ TouchScroll.prototype = {
                 }
 
                 if (this.scrollevents) { this._fireScrollEvent(); }
-                break;
+                return;
             }
         }
     },
