@@ -519,10 +519,11 @@ TouchScroll.prototype = {
         var flickAllowed = lag <= configFlicking.triggerThreshold &&
             moveSpeed >= configFlicking.minSpeed;
 
+        var flick, flickDistance, flickDuration;
         if (flickAllowed) {
-            var flick = this._computeFlick(moveSpeed);
-            var flickDuration = flick[0];
-            var flickDistance = flick[1];
+            flick = this._computeFlick(moveSpeed);
+            flickDuration = flick[0];
+            flickDistance = flick[1];
         }
 
         if (flickAllowed && flick[0] && flick[1]) {
@@ -649,7 +650,7 @@ TouchScroll.prototype = {
             var axisMinOffset = -maxOffset[axis];
             if (axisOffset > 0 || axisOffset < axisMinOffset) {
                 scrollOffset[axis] = axisOffset = axisOffset > 0 ? 0 : axisMinOffset;
-                var matrix = zeroMatrix.translate(0, 0, 0);
+                matrix = zeroMatrix.translate(0, 0, 0);
                 matrix[axis] = axisOffset;
                 offsetSpecs[offsetSpecs.length] = {
                     style: scrollers[axis].style,
@@ -696,17 +697,17 @@ TouchScroll.prototype = {
 
             var tipSize = barMetrics.tipSize;
 
-            var maxOffset = barMetrics.maxOffset;
-            maxOffset.e = availLength.e; - barSizes.e;
-            maxOffset.f = availLength.f; - barSizes.f;
+            var barMaxOffset = barMetrics.maxOffset;
+            barMaxOffset.e = availLength.e;
+            barMaxOffset.f = availLength.f;
 
             var offsetRatios = barMetrics.offsetRatios;
-            offsetRatios.e = maxOffset.e / -scrollWidth;
-            offsetRatios.f = maxOffset.f / -scrollHeight;
+            offsetRatios.e = barMaxOffset.e / -scrollWidth;
+            offsetRatios.f = barMaxOffset.f / -scrollHeight;
 
-            var i = 0, axes = activeAxes;
-            var axis, parts, size, scale, offset;
-            var barMatrix;
+            var parts, size, scale, offset, barMatrix;
+            i = 0;
+            axes = activeAxes;
             while ((axis = axes[i++])) {
                 parts = bars.parts[axis];
                 tipSize = tipSize || parts[0].offsetHeight;
@@ -767,19 +768,20 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var hasBars = !!bars;
 
+        var barMetrics, barSizes, tipSize, barMaxOffset, barParts;
         if (hasBars) {
-            var barMetrics = this._barMetrics;
-            var barSizes = barMetrics.sizes;
-            var tipSize = barMetrics.tipSize;
-            var barMaxOffset = barMetrics.maxOffset;
-            var parts = bars.parts;
+            barMetrics = this._barMetrics;
+            barSizes = barMetrics.sizes;
+            tipSize = barMetrics.tipSize;
+            barMaxOffset = barMetrics.maxOffset;
+            barParts = bars.parts;
         }
 
         var scrollOffset = this._determineOffset(true);
         var maxOffset = this._maxOffset;
 
         var i = 0, snapAxis;
-        var zeroOffset = {e: 0, f: 0}
+        var zeroOffset = {e: 0, f: 0};
 
         var offsetSpecs = [], numOffsetSpecs = 0;
         while ((snapAxis = axes[i++])) {
@@ -815,7 +817,7 @@ TouchScroll.prototype = {
                     barTimingFunc = bezier.divideAtT(t)[1];
                 }
 
-                var parts = bars.parts[snapAxis];
+                var parts = barParts[snapAxis];
                 var barDelay = duration - barDuration;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: parts[0].style,
@@ -961,12 +963,13 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var hasBars = !!bars;
 
+        var barMetrics, barOffsetRatios, barTipSize, barSizes, barParts;
         if (hasBars) {
-            var barMetrics = this._barMetrics;
-            var barOffsetRatios = barMetrics.offsetRatios;
-            var barTipSize = barMetrics.tipSize;
-            var barSizes = barMetrics.sizes;
-            var barParts = bars.parts;
+            barMetrics = this._barMetrics;
+            barOffsetRatios = barMetrics.offsetRatios;
+            barTipSize = barMetrics.tipSize;
+            barSizes = barMetrics.sizes;
+            barParts = bars.parts;
         }
 
         var tf = config.flicking.timingFunc;
@@ -981,8 +984,6 @@ TouchScroll.prototype = {
 
         var flickTarget = scrollOffset.multiply(vector);
         var zeroMatrix = new this._Matrix();
-
-        var maxDuration = 0;
 
         var offsetSpecs = [], numOffsetSpecs = 0;
         var barResetSpecs = [], numBarResets = 0;
@@ -1030,12 +1031,13 @@ TouchScroll.prototype = {
             var durationBounce = duration - durationFlick;
             if (durationFlick > maxDuration) { maxDuration = durationFlick; }
 
+            var bounceSign, distanceBounceAbs;
             if (isElastic && distanceBounce) {
                 durationBounce *= configBounceFactor;
                 distanceBounce *= configBounceFactor;
 
-                var bounceSign = distanceBounce < 0 ? -1 : 1;
-                var distanceBounceAbs = distanceBounce * bounceSign;
+                bounceSign = distanceBounce < 0 ? -1 : 1;
+                distanceBounceAbs = distanceBounce * bounceSign;
 
                 // limit the bounce to the configured maximum
                 if (distanceBounceAbs > maxBounceLength) {
@@ -1066,9 +1068,9 @@ TouchScroll.prototype = {
                 this._numTransitions++;
             }
 
+            var barScale;
             if (hasBars) {
-                var barParts = bars.parts[axis];
-                var barScale = barSizes[axis] - 2 * barTipSize;
+                barScale = barSizes[axis] - 2 * barTipSize;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: barParts[3].style,
                     matrix: {e: 0, f: ~~(flickMatrix[axis] * barOffsetRatios[axis])},
@@ -1099,7 +1101,7 @@ TouchScroll.prototype = {
                     var barTargetSize = ~~(barScale - distanceBounceAbs + 0.5); // round
                     if (barTargetSize < 1) { barTargetSize = 1; }
                     if (distanceBounceAbs > barScale) {
-                        var t = timingFuncBounceBar.getTforY(barScale / distanceBounceAbs, epsilon);
+                        t = timingFuncBounceBar.getTforY(barScale / distanceBounceAbs, epsilon);
                         var timeFraction = timingFuncBounce.getPointForT(t).x;
                         durationBounceBar *= timeFraction;
                         timingFuncBounceBar = timingFuncBounceBar.divideAtT(t)[0];
@@ -1300,17 +1302,21 @@ TouchScroll.prototype = {
         var bouncers = scrollers.bouncers;
         var bars = dom.bars;
         var hasBars = !!bars;
+
+        var barMetrics, barParts, sizes, tipSize, offsetRatios, barMaxOffsets;
+        var parts, defaultSize, size, indicatorOffset, barMaxOffset, barMatrix, barSizeSubstract;
         if (hasBars) {
-            var barMetrics = this._barMetrics;
-            var barParts = bars.parts;
-            var sizes = barMetrics.sizes;
-            var tipSize = barMetrics.tipSize;
-            var offsetRatios = barMetrics.offsetRatios;
-            var barMaxOffsets = barMetrics.maxOffset;
-            var parts, defaultSize, size, indicatorOffset, barMaxOffset, barMatrix, barSizeSubstract;
+            barMetrics = this._barMetrics;
+            barParts = bars.parts;
+            sizes = barMetrics.sizes;
+            tipSize = barMetrics.tipSize;
+            offsetRatios = barMetrics.offsetRatios;
+            barMaxOffsets = barMetrics.maxOffset;
+
         }
 
         var offsetSpecs = [], numOffsetSpecs = 0;
+        var isOutOfBounds, wasOutOfBounds;
 
         var bounceMatrix, bounceOffset;
         var factor = this.config.elasticity.factorDrag;
@@ -1326,12 +1332,12 @@ TouchScroll.prototype = {
                 axisScrollOffset = scrollOffset[axis];
 
                 // whether the scroller was already beyond scroll bounds
-                var wasOutOfBounds = axisScrollOffset < axisMaxOffset || axisScrollOffset > 0;
+                wasOutOfBounds = axisScrollOffset < axisMaxOffset || axisScrollOffset > 0;
                 if (wasOutOfBounds) {
                     axisNewOffset -= matrix[axis] * (1 - factor);
                 }
 
-                var isOutOfBounds = axisNewOffset < axisMaxOffset || axisNewOffset > 0;
+                isOutOfBounds = axisNewOffset < axisMaxOffset || axisNewOffset > 0;
 
                 // whether the drag/scroll action went across scroller bounds
                 var crossingBounds = (wasOutOfBounds && !isOutOfBounds) ||
@@ -1388,7 +1394,7 @@ TouchScroll.prototype = {
                 parts = barParts[axis];
 
                 // adjust offset
-                indicatorOffset = ~~(axisNewOffset * offsetRatios[axis] + .5); // round
+                indicatorOffset = ~~(axisNewOffset * offsetRatios[axis] + 0.5); // round
                 barMaxOffset = barMaxOffsets[axis];
                 if (indicatorOffset < 0) { indicatorOffset = 0; }
                 else if (indicatorOffset > barMaxOffset) { indicatorOffset = barMaxOffset + defaultSize - size - 2 * tipSize; }
@@ -1403,7 +1409,7 @@ TouchScroll.prototype = {
                 var partsOffset = 0;
                 if (isOutOfBounds) {
                     barSizeSubstract = bounceOffset < 0 ? -bounceOffset : bounceOffset;
-                    size -= ~~(barSizeSubstract + .5);
+                    size -= ~~(barSizeSubstract + 0.5);
                     if (size < 1) { size = 1; }
                     if (bounceOffset < 0) {
                         partsOffset = defaultSize - size;
@@ -1475,8 +1481,8 @@ TouchScroll.prototype = {
             style.webkitTransitionDelay = (spec.delay || 0) + "ms";
 
             var transform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-            var scaleY = matrix.d;
-            if (scaleY != null && scaleY !== 1) {
+            var scaleY = "d" in matrix ? matrix.d : 1;
+            if (scaleY !== 1 && scaleY !== null) {
                 transform += " scaleY(" + scaleY + ")";
             }
             style.webkitTransform = transform;
