@@ -560,15 +560,15 @@ TouchScroll.prototype = {
             isBouncer = target === bouncers[axis];
 
             if (isScroller || isBouncer) {
-                endScroll = true;
                 if (isBouncer) {
                     this.snapBack(axis);
                 }
-                this._numTransitions--;
+                if (0 === this._numTransitions--) {
+                    this._endScroll();
+                }
+
+                break;
             }
-        }
-        if (endScroll && 0 === this._numTransitions) {
-            this._endScroll();
         }
     },
 
