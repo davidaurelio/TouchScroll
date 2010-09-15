@@ -253,14 +253,6 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether to build and use scrollbars. */
     var useScrollbars = "scrollbars" in options ?  !!options.scrollbars : true;
 
-    /**
-     * An array of timeout handles for queued animations and actions that have
-     * to be cancelled on animation stop.
-     *
-     * @type {Number[]}
-     */
-    this._scrollTimeouts = [];
-
     /** @type {Object} Holds scrollbar related metrics. */
     this._barMetrics = {
         /** @type {Object} Stores the offset height of the scrollbar "tracks". */
@@ -1495,11 +1487,6 @@ TouchScroll.prototype = {
      * Stops all running animations.
      */
     _stopAnimations: function _stopAnimations() {
-        var timeouts = this._scrollTimeouts;
-        for (var i = 0, len = timeouts.length; i < len; i++) {
-            clearTimeout(timeouts[i]);
-        }
-
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
         var bouncers = scrollers.bouncers;
