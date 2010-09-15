@@ -623,12 +623,25 @@ TouchScroll.prototype = {
         }
     },
 
-
+    /**
+     * Scroll the scroller by the given amount of pixels.
+     *
+     * @param {Number} e The horizontal amount of pixels to scroll.
+     * @param {Number} f The vertical amount of pixels to scroll.
+     * @param {Number} [duration] Duration in milliseconds for the transition.
+     */
     scrollBy: function scrollBy(e, f, duration) {
         var scrollMatrix = this._determineOffset(true).inverse().translate(e, f, 0);
         return this.scrollTo(scrollMatrix.e, scrollMatrix.f, duration);
     },
 
+    /**
+     * Scroll the scroller to the given coordinates.
+     *
+     * @param {Number} e The horizontal offset.
+     * @param {Number} f The vertical offset.
+     * @param {Number} [duration] Duration in milliseconds for the transition.
+     */
     scrollTo: function scrollTo(e, f, duration) {
         if (duration <= 0) {
             // limit to bounds if not flicking
@@ -779,8 +792,7 @@ TouchScroll.prototype = {
                     },
                     {
                         style: parts[1].style,
-                        matrix: barMatrix,
-                        useMatrix: true
+                        matrix: barMatrix
                     },
                     {
                         style: parts[2].style,
@@ -1123,11 +1135,10 @@ TouchScroll.prototype = {
                 this._numTransitions++;
             }
 
-            var barScale;
+            var parts = barParts[axis];
             if (hasBars) {
-                barScale = barSizes[axis] - 2 * barTipSize;
                 offsetSpecs[numOffsetSpecs++] = {
-                    style: barParts[3].style,
+                    style: parts[3].style,
                     matrix: {e: 0, f: ~~(flickMatrix[axis] * barOffsetRatios[axis])},
                     timingFunc: timingFuncFlick,
                     duration: durationFlick
@@ -1136,17 +1147,19 @@ TouchScroll.prototype = {
 
             if (isElastic && distanceBounce) {
                 if (hasBars) {
+                    var barScale = barSizes[axis] - 2 * barTipSize;
+
                     // reset potential bar scaling. Will be applied before the flick
                     barResetSpecs[numBarResets++] = {
-                        style: barParts[0].style,
+                        style: parts[0].style,
                         matrix: {e: 0, f: 0}
                     };
                     barResetSpecs[numBarResets++] = {
-                        style: barParts[1].style,
+                        style: parts[1].style,
                         matrix: {e: 0, f: barTipSize, d: barScale}
                     };
                     barResetSpecs[numBarResets++] = {
-                        style: barParts[2].style,
+                        style: parts[2].style,
                         matrix: {e: 0, f: barScale + barTipSize}
                     };
 
@@ -1163,19 +1176,19 @@ TouchScroll.prototype = {
                     }
                     var barOffset = distanceBounce < 0 ? barScale - barTargetSize : 0;
                     offsetSpecs[numOffsetSpecs++] = {
-                        style: barParts[0].style,
+                        style: parts[0].style,
                         matrix: {e: 0, f: barOffset},
                         delay: durationFlick,
                         duration: durationBounceBar
                     };
                     offsetSpecs[numOffsetSpecs++] = {
-                        style: barParts[1].style,
+                        style: parts[1].style,
                         matrix: {e: 0, f: barOffset + barTipSize, d: barTargetSize},
                         delay: durationFlick,
                         duration: durationBounceBar
                     };
                     offsetSpecs[numOffsetSpecs++] = {
-                        style: barParts[2].style,
+                        style: parts[2].style,
                         matrix: {e: 0, f: barOffset + barTipSize + barTargetSize},
                         delay: durationFlick,
                         duration: durationBounceBar
@@ -1261,7 +1274,8 @@ TouchScroll.prototype = {
         this._insertNodes(scrollbars);
 
         // put original contents back into DOM
-        dom.scrollers.inner.appendChild(children);
+        var innerScroller = dom.scrollers.inner;
+        innerScroller.appendChild(children);
 
         // register event listeners
         var eventNames = this._eventNames;
@@ -1272,7 +1286,8 @@ TouchScroll.prototype = {
             "webkitTransitionEnd"
         ].forEach(function(type) { scrollElement.addEventListener(type, this, false); }, this);
 
-        dom.scrollers.inner.addEventListener("DOMSubtreeModified", this, false);
+        innerScroller.addEventListener("DOMSubtreeModified", this, false);
+        innerScroller.addEventListener("focus", this, true);
 
         this.setupScroller();
     },
@@ -1517,8 +1532,6 @@ TouchScroll.prototype = {
      *          Non-arrays will be converted to strings.
      *      {Number} [duration] Miliseconds
      *      {Number} [delay] The `transition-delay` to apply in miliseconds.
-     *      {Boolean} [useMatrix] Whether to use the whole matrix or only the
-     *          translation values (which is faster). Defaults to false.
      */
     _setStyleOffset: function _setStyleOffset(specs) {
         var style, matrix, timingFunc;
@@ -1598,14 +1611,12 @@ TouchScroll.prototype = {
 
                 offsetSpecs[j++] = {
                     style: parts[0].style,
-                    matrix: {e: 0, f: 0},
-                    useMatrix: true
+                    matrix: {e: 0, f: 0}
                 };
 
                 offsetSpecs[j++] = {
                     style: parts[1].style,
-                    matrix: {e: 0, f: barTipSize, d: barSize},
-                    useMatrix: true
+                    matrix: {e: 0, f: barTipSize, d: barSize}
                 };
 
                 offsetSpecs[j++] = {
