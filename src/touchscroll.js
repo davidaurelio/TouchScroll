@@ -1571,3 +1571,68 @@ TouchScroll.prototype = {
         this._setStyleOffset(offsetSpecs);
     }
 };
+
+
+// Add getter + setter functions for scroll positions
+[
+    [
+        "scrollTop",
+        function() {
+            var offset = this._numTransitions ? this._determineOffset() : this._scrollOffset;
+            return -offset.f;
+        },
+        function (val) {
+            this.scrollTo(0, val);
+        }
+    ],
+    [
+        "scrollLeft",
+        function() {
+            var offset = this._numTransitions ? this._determineOffset() : this._scrollOffset;
+            return -offset.e;
+        },
+        function (val) {
+            this.scrollTo(val, 0);
+        }
+    ]
+].forEach(function(p) {
+    TouchScroll.prototype.__defineGetter__(p[0], p[1]);
+    TouchScroll.prototype.__defineSetter__(p[0], p[2]);
+});
+
+// Add getter/setter functions for DOM facade
+[
+    "childNodes",
+    "children",
+    "firstChild",
+    "firstElementChild",
+    "innerHTML",
+    "innerText",
+    "lastChild",
+    "lastElementChild"
+].forEach(function(prop) {
+    TouchScroll.prototype.__defineGetter__(prop, function() {
+        return this._dom.scrollers.inner[prop];
+    });
+    TouchScroll.prototype.__defineSetter__(prop, function(val) {
+        this._dom.scrollers.inner[prop] = val;
+    });
+});
+
+// Add DOM methods facade
+[
+    "insertAdjacentElement",
+    "insertAdjacentHTML",
+    "insertAdjacentText",
+    "querySelector",
+    "querySelectorAll",
+    "addEventListener",
+    "appendChild",
+    "insertBefore",
+    "replaceChild"
+].forEach(function(method) {
+    TouchScroll.prototype[method] = function() {
+        var inner = this._dom.scrollers.inner;
+        return inner[method].apply(inner, arguments);
+    };
+});
