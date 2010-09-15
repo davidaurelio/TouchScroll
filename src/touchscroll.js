@@ -389,23 +389,17 @@ TouchScroll.prototype = {
     _styleSheet: TouchScroll._styleSheet,
 
     /**
-     * Centers the scroller.
-     *
-     * @returns {TouchScroll} Returns the TouchScroll instance.
-     */
-    center: function center() {
-        return this;
-    },
-
-    /**
      * Centers the scroller at given coordinates.
      *
      * @param {Number} left The horizontal offset.
      * @param {Number} top The vertical offset.
-     * @returns {TouchScroll} Returns the TouchScroll instance.
+     * @param {Number} [duration] Duration in milliseconds for the transition.
      */
-    centerAt: function centerAt(left, top) {
-        return this;
+    centerAt: function centerAt(left, top, duration) {
+        var m = this._metrics;
+        left += Math.ceil(m.offsetWidth / 2);
+        top += Math.ceil(m.offsetHeight / 2);
+        this.scrollTo(left, top, duration);
     },
 
     /**
