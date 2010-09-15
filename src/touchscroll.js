@@ -1213,15 +1213,19 @@ TouchScroll.prototype = {
 
         this._insertNodes(scrollbars);
 
-        // register event listeners
-        var eventNames = this._eventNames;
-        scrollElement.addEventListener(eventNames.start, this);
-        scrollElement.addEventListener(eventNames.move, this);
-        scrollElement.addEventListener(eventNames.end, this);
-        scrollElement.addEventListener("webkitTransitionEnd", this);
-
         // put original contents back into DOM
         dom.scrollers.inner.appendChild(children);
+
+        // register event listeners
+        var eventNames = this._eventNames;
+        [
+            eventNames.start,
+            eventNames.move,
+            eventNames.end,
+            "webkitTransitionEnd"
+        ].forEach(function(type) { scrollElement.addEventListener(type, this, false); }, this);
+
+        dom.scrollers.inner.addEventListener("DOMSubtreeModified", this, false);
 
         this.setupScroller();
     },
