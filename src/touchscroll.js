@@ -427,11 +427,7 @@ TouchScroll.prototype = {
     */
    _scrollerTemplate: [
             '<div class="-ts-layer -ts-outer">', // scrolling layer y-axis
-                '<div class="-ts-layer">', // scrolling layer x-axis
-                    '<div class="-ts-layer">', // bouncer y-axis
-                        '<div class="-ts-layer -ts-inner"></div>', // bouncer x-axis
-                    '</div>',
-                '</div>',
+                '<div class="-ts-layer -ts-inner"></div>', // scrolling layer x-axis
             '</div>',
             '<div class="-ts-bars"></div>'
         ].join(""),
@@ -638,28 +634,28 @@ TouchScroll.prototype = {
     },
 
     onTransitionEnd: function onTranistionEnd(event) {
-        var target = event.target;
-        var dom = this._dom;
-        var scrollers = dom.scrollers;
-        var bouncers = scrollers.bouncers;
-        var axes = this._axes;
-
-        var i = 0, axis;
-        while ((axis = axes[i++])) {
-            var isBouncer = target === bouncers[axis];
-
-            if (isBouncer || target === scrollers[axis]) {
-                if (isBouncer) {
-                    this.snapBack(axis);
-                }
-                if (0 === --this._numTransitions) {
-                    this._endScroll();
-                }
-
-                if (this.scrollevents) { this._fireScrollEvent(); }
-                return;
-            }
-        }
+        //var target = event.target;
+        //var dom = this._dom;
+        //var scrollers = dom.scrollers;
+        ////var bouncers = scrollers.bouncers;
+        //var axes = this._axes;
+        //
+        //var i = 0, axis;
+        //while ((axis = axes[i++])) {
+        //    var isBouncer = target === bouncers[axis];
+        //
+        //    if (isBouncer || target === scrollers[axis]) {
+        //        if (isBouncer) {
+        //            this.snapBack(axis);
+        //        }
+        //        if (0 === --this._numTransitions) {
+        //            this._endScroll();
+        //        }
+        //
+        //        if (this.scrollevents) { this._fireScrollEvent(); }
+        //        return;
+        //    }
+        //}
     },
 
     /**
@@ -870,7 +866,7 @@ TouchScroll.prototype = {
         var timingFunc = snapBackConfig.timingFunc;
 
         var dom = this._dom;
-        var bouncers = dom.scrollers.bouncers;
+        var scrollers = dom.scrollers;
         var bars = dom.bars;
         var hasBars = !!bars;
 
@@ -887,7 +883,7 @@ TouchScroll.prototype = {
         var maxOffset = this._maxOffset;
 
         var i = 0, snapAxis;
-        var zeroOffset = {e: 0, f: 0};
+        var zeroMatrix = new this._Matrix(), matrix;
 
         var offsetSpecs = [], numOffsetSpecs = 0;
         while ((snapAxis = axes[i++])) {
@@ -898,9 +894,11 @@ TouchScroll.prototype = {
             }
 
             // snap back bouncer layer
+            matrix = zeroMatrix.translate(0, 0, 0);
+            matrix[axis] = scrollOffset > 0 ? 0 : maxOffset[axis];
             offsetSpecs[numOffsetSpecs++] = {
-                style: bouncers[snapAxis].style,
-                matrix: zeroOffset,
+                style: scrollers[snapAxis].style,
+                matrix: matrix,
                 duration: duration,
                 timingFunc: timingFunc
             };
@@ -1021,13 +1019,11 @@ TouchScroll.prototype = {
      */
     _determineOffset: function _determineOffset(round) {
         var scrollers = this._dom.scrollers;
-        var bouncers = scrollers.bouncers;
         var offset = this._scrollOffset;
 
         var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
             var axisOffset = this._getNodeOffset(scrollers[axis])[axis];
-            axisOffset += this._getNodeOffset(bouncers[axis])[axis];
             if (round) {
                 // This is a high performance rounding method:
                 // Add 0.5 and then do a double binary inversion
@@ -1065,7 +1061,6 @@ TouchScroll.prototype = {
 
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        var bouncers = scrollers.bouncers;
         var bars = dom.bars;
         var hasBars = !!bars;
 
@@ -1159,14 +1154,15 @@ TouchScroll.prototype = {
             // create matrixes for flick and bounce
             var flickMatrix = zeroMatrix.translate(0, 0, 0);
             flickMatrix[axis] = ~~(targetFlick + 0.5); // fast round
-            var bounceMatrix = zeroMatrix.translate(0, 0, 0);
-            bounceMatrix[axis] = distanceBounce;
+            var bounceMatrix = flickMatrix.translate(0, 0, 0);
+            bounceMatrix[axis] += distanceBounce;
 
             // queue each transition
             // flick
+            var scrollerStyle = scrollers[axis].style
             if (distanceFlick) {
                 offsetSpecs[numOffsetSpecs++] = {
-                    style: scrollers[axis].style,
+                    style: scrollerStyle,
                     matrix: flickMatrix,
                     timingFunc: timingFuncFlick,
                     duration: durationFlick
@@ -1235,18 +1231,17 @@ TouchScroll.prototype = {
                 }
 
                 // bounce layer
-                offsetSpecs[numOffsetSpecs++] = {
-                    style: bouncers[axis].style,
+                this._setStyleOffset([{
+                    style: scrollerStyle,
                     matrix: bounceMatrix,
                     timingFunc: timingFuncBounce,
-                    duration: durationBounce,
-                    delay: durationFlick
-                };
+                    duration: durationBounce
+                }], durationFlick);
                 this._numTransitions++;
             }
         }
         this._setStyleOffset(barResetSpecs);
-        this._setStyleOffset(offsetSpecs);
+        this._setStyleOffset(offsetSpecs, 0);
 
         if (this.scrollevents && maxDuration) {
             var that = this;
@@ -1348,15 +1343,13 @@ TouchScroll.prototype = {
         // setup references to scroller HTML nodes
         var scrollers = dom.scrollers = {
             inner: scrollElement.querySelector(".-ts-inner"),
-            bouncers: {}
+            e: null, f: null
         };
 
         // find layers
         var layers = scrollElement.querySelectorAll(".-ts-layer");
         scrollers.f = layers[0];
         scrollers.e = layers[1];
-        scrollers.bouncers.f = layers[2];
-        scrollers.bouncers.e = layers[3];
 
         // build scrollbars
         if (scrollbars) {
@@ -1408,7 +1401,6 @@ TouchScroll.prototype = {
 
         var dom = this._dom;
         var scrollers = dom.scrollers;
-        var bouncers = scrollers.bouncers;
         var bars = dom.bars;
         var hasBars = !!bars;
 
@@ -1427,7 +1419,7 @@ TouchScroll.prototype = {
         var offsetSpecs = [], numOffsetSpecs = 0;
         var isOutOfBounds, wasOutOfBounds;
 
-        var bounceMatrix, bounceOffset;
+        var bounceOffset;
         var factor = this.config.elasticity.factorDrag;
         var i = 0, axes = this._activeAxes, axis;
         while ((axis = axes[i++])) {
@@ -1437,7 +1429,6 @@ TouchScroll.prototype = {
             bounceOffset = 0;
 
             if (isElastic) {
-                bounceMatrix = zeroMatrix.translate(0, 0, 0);
                 axisScrollOffset = scrollOffset[axis];
 
                 // whether the scroller was already beyond scroll bounds
@@ -1473,15 +1464,7 @@ TouchScroll.prototype = {
                 }
 
                 if (isOutOfBounds) {
-                    bounceOffset = bounceMatrix[axis] =
-                        axisNewOffset > 0 ? axisNewOffset : axisNewOffset - axisMaxOffset;
-                }
-
-                if (isOutOfBounds || wasOutOfBounds) {
-                    offsetSpecs[numOffsetSpecs++] = {
-                        style: bouncers[axis].style,
-                        matrix: bounceMatrix
-                    };
+                    bounceOffset = axisNewOffset > 0 ? axisNewOffset : axisNewOffset - axisMaxOffset;
                 }
             }
 
@@ -1491,7 +1474,7 @@ TouchScroll.prototype = {
             else if (axisNewOffset > 0) { axisNewOffset = 0; }
 
             var scrollMatrix = zeroMatrix.translate(0, 0, 0);
-            scrollMatrix[axis] = axisNewOffset;
+            scrollMatrix[axis] = axisNewOffset + bounceOffset;
             offsetSpecs[numOffsetSpecs++] = {
                 style: scrollers[axis].style,
                 matrix: scrollMatrix
@@ -1572,27 +1555,37 @@ TouchScroll.prototype = {
      *      {Number} [duration] Miliseconds
      *      {Number} [delay] The `transition-delay` to apply in miliseconds.
      */
-    _setStyleOffset: function _setStyleOffset(specs) {
-        var style, matrix, timingFunc;
-        var spec, i = 0;
-        while ((spec = specs[i++])) {
-            style = spec.style;
-            matrix = spec.matrix;
-            timingFunc = spec.timingFunc;
-            timingFunc = timingFunc && timingFunc.join ?
-                    "cubic-bezier(" + timingFunc.join(",") + ")" :
-                    timingFunc;
+    _setStyleOffset: function _setStyleOffset(specs, timeout) {
+        if (timeout) {
+            var t = this._scrollTimeouts;
+            t[t.length] = setTimeout(function() {_setStyleOffset(specs);}, timeout);
+        }
+        else {
+            var style, matrix, timingFunc;
+            var spec, i = 0;
+            while ((spec = specs[i++])) {
+                style = spec.style;
+                matrix = spec.matrix;
+                timingFunc = spec.timingFunc;
+                timingFunc = timingFunc && timingFunc.join ?
+                        "cubic-bezier(" + timingFunc.join(",") + ")" :
+                        timingFunc;
 
-            style.webkitTransitionDuration = (spec.duration || 0) + "ms";
-            style.webkitTransitionTimingFunction = timingFunc;
-            style.webkitTransitionDelay = (spec.delay || 0) + "ms";
+                style.webkitTransitionDuration = (spec.duration || 0) + "ms";
+                style.webkitTransitionTimingFunction = timingFunc;
+                style.webkitTransitionDelay = (spec.delay || 0) + "ms";
 
-            var transform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
-            var scaleY = "d" in matrix ? matrix.d : 1;
-            if (scaleY !== 1 && scaleY !== null) {
-                transform += " scaleY(" + scaleY + ")";
+                var transform = "translate(" + matrix.e + "px, " + matrix.f + "px)";
+                var scaleX = matrix.a || 1;
+                var scaleY = matrix.d || 1;
+                if (scaleX !== 1) {
+                    transform += " scaleX(" + scaleX + ")";
+                }
+                if (scaleY !== 1) {
+                    transform += " scaleY(" + scaleY + ")";
+                }
+                style.webkitTransform = transform;
             }
-            style.webkitTransform = transform;
         }
     },
 
@@ -1607,7 +1600,6 @@ TouchScroll.prototype = {
 
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
-        var bouncers = scrollers.bouncers;
         var bars = dom.bars;
         var barParts = bars && bars.parts;
         var offset = this._determineOffset();
@@ -1638,11 +1630,6 @@ TouchScroll.prototype = {
             offsetSpecs[j++] = {
                 style: scrollers[axis].style,
                 matrix: matrix
-            };
-
-            offsetSpecs[j++] = {
-                style: bouncers[axis].style,
-                matrix: {e: 0, f: 0}
             };
 
             if (barParts) {
