@@ -1090,7 +1090,7 @@ TouchScroll.prototype = {
         var zeroMatrix = new this._Matrix();
 
         var offsetSpecs = [], numOffsetSpecs = 0;
-        var barResetSpecs = [], numBarResets = 0;
+        var bounceSpecs, numBounceSpecs; // set individually for each axis
 
         var maxDuration = 0;
 
@@ -1184,19 +1184,22 @@ TouchScroll.prototype = {
             }
 
             if (isElastic && distanceBounce) {
+                bounceSpecs = [];
+                numBounceSpecs = 0;
+
                 if (hasBars) {
                     var barScale = barSizes[axis] - 2 * barTipSize;
 
-                    // reset potential bar scaling. Will be applied before the flick
-                    barResetSpecs[numBarResets++] = {
+                    // reset potential bar scaling. Will be applied with the flick
+                    offsetSpecs[numOffsetSpecs++] = {
                         style: parts[0].style,
                         matrix: {e: 0, f: 0}
                     };
-                    barResetSpecs[numBarResets++] = {
+                    offsetSpecs[numOffsetSpecs++] = {
                         style: parts[1].style,
                         matrix: {e: 0, f: barTipSize, d: barScale}
                     };
-                    barResetSpecs[numBarResets++] = {
+                    offsetSpecs[numOffsetSpecs++] = {
                         style: parts[2].style,
                         matrix: {e: 0, f: barScale + barTipSize}
                     };
@@ -1213,37 +1216,34 @@ TouchScroll.prototype = {
                         timingFuncBounceBar = timingFuncBounceBar.divideAtT(t)[0];
                     }
                     var barOffset = distanceBounce < 0 ? barScale - barTargetSize : 0;
-                    offsetSpecs[numOffsetSpecs++] = {
+                    bounceSpecs[numBounceSpecs++] = {
                         style: parts[0].style,
                         matrix: {e: 0, f: barOffset},
-                        delay: durationFlick,
                         duration: durationBounceBar
                     };
-                    offsetSpecs[numOffsetSpecs++] = {
+                    bounceSpecs[numBounceSpecs++] = {
                         style: parts[1].style,
                         matrix: {e: 0, f: barOffset + barTipSize, d: barTargetSize},
-                        delay: durationFlick,
                         duration: durationBounceBar
                     };
-                    offsetSpecs[numOffsetSpecs++] = {
+                    bounceSpecs[numBounceSpecs++] = {
                         style: parts[2].style,
                         matrix: {e: 0, f: barOffset + barTipSize + barTargetSize},
-                        delay: durationFlick,
                         duration: durationBounceBar
                     };
                 }
 
                 // bounce layer
-                this._setStyleOffset([{
+                bounceSpecs[numBounceSpecs++] = {
                     style: scrollerStyle,
                     matrix: bounceMatrix,
                     timingFunc: timingFuncBounce,
                     duration: durationBounce
-                }], durationFlick);
+                };
+                this._setStyleOffset(bounceSpecs, durationFlick);
                 this._numTransitions++;
             }
         }
-        this._setStyleOffset(barResetSpecs);
         this._setStyleOffset(offsetSpecs, 0);
 
         if (this.scrollevents && maxDuration) {
