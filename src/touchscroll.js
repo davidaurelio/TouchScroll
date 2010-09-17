@@ -206,91 +206,90 @@ TouchScroll._styleSheet = (function() {
 }());
 
 [
-    ".TouchScroll {" +
-        "position: relative;" +
-        "display: -webkit-box;" +
+    ".TouchScroll{" +
+        "position:relative;" +
+        "display:-webkit-box;" +
     "}",
-    ".TouchScroll.scrolling {" +
-        "-webkit-user-select: none;" +
+    ".TouchScroll.scrolling{" +
+        "-webkit-user-select:none;" +
     "}",
-    ".-ts-layer {" +
-        "-webkit-transition-property: -webkit-transform;" +
-        "-webkit-transform: translate3d(0, 0, 0);" +
-        "-webkit-transform-style: preserve-3d;" +
-        "position: absolute;" +
-        "height: 100%;" +
-        "top: 0;" +
-        "right: 0;" +
-        "left: 0;" +
+    ".-ts-layer{" +
+        "-webkit-transition-property:-webkit-transform;" +
+        "-webkit-transform:translate3d(0,0,0);" +
+        "-webkit-transform-style:preserve-3d;" +
+        "position:absolute;" +
+        "height:100%;" +
+        "top:0;" +
+        "right:0;" +
+        "left:0;" +
     "}",
-    ".-ts-outer {" +
-        "-webkit-box-flex: 1;" +
-        "position: relative;" +
-        "height: auto;" +
+    ".-ts-outer{" +
+        "-webkit-box-flex:1;" +
+        "position:relative;" +
+        "height:auto;" +
     "}",
-    ".-ts-bars {" +
-        "bottom: 0;" +
-        "left: 0;" +
-        "pointer-events: none;" +
-        "position: absolute;" +
-        "opacity: 0;" +
-        "right: 0;" +
-        "top: 0;" +
-        "z-index: 2147483647;" +
-        "-webkit-transition: opacity 250ms;" +
+    ".-ts-bars{" +
+        "bottom:0;" +
+        "left:0;" +
+        "pointer-events:none;" +
+        "position:absolute;" +
+        "opacity:0;" +
+        "right:0;" +
+        "top:0;" +
+        "z-index:2147483647;" +
+        "-webkit-transition:opacity 250ms;" +
     "}",
-    ".-ts-bars-active {" +
-        "opacity: 1;" +
-        "-webkit-transition: none;" +
+    ".-ts-bars-active{" +
+        "opacity:1;" +
+        "-webkit-transition:none;" +
     "}",
-    ".-ts-bar {" +
-        "display: none;" +
-        "position: absolute;" +
-        "right: 3px;" +
-        "bottom: 3px;" +
-        "-webkit-transform-style: preserve-3d;" +
+    ".-ts-bar{" +
+        "display:none;" +
+        "position:absolute;" +
+        "right:3px;" +
+        "bottom:3px;" +
+        "-webkit-transform-style:preserve-3d;" +
     "}",
-    ".-ts-bar.active {" +
-        "display: block;" +
+    ".-ts-bar.active{" +
+        "display:block;" +
     "}",
-    ".-ts-bar-e {" +
-        "height: 7px;" +
-        "left: 3px;" +
-        "-webkit-transform: rotate(-90deg) translateX(-7px);" +
-        "-webkit-transform-origin: 0 0;" +
+    ".-ts-bar-e{" +
+        "height:7px;" +
+        "left:3px;" +
+        "-webkit-transform:rotate(-90deg) translateX(-7px);" +
+        "-webkit-transform-origin:0 0;" +
     "}",
-    ".-ts-bar-f {" +
+    ".-ts-bar-f{" +
+        "width:7px;" +
+        "top:3px;" +
+    "}",
+    ".-ts-bars-both .-ts-bar-e{" +
+        "right:9px;" +
+    "}",
+    ".-ts-bars-both .-ts-bar-f{" +
+        "bottom:9px;" +
+    "}",
+    ".-ts-indicator-e,.-ts-indicator-f,.-ts-bar-part{" +
+        "position:absolute;" +
+    "}",
+    ".-ts-bar-part{" +
+        "background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) no-repeat center 0;" +
+        "-webkit-background-size:7px; " +
         "width: 7px;" +
-        "top: 3px;" +
+        "-webkit-transform-origin:0 0;" +
     "}",
-    ".-ts-bars-both .-ts-bar-e {" +
-        "right: 9px;" +
+    ".-ts-bar-1,.-ts-bar-3{" +
+        "height:3px;" +
     "}",
-    ".-ts-bars-both .-ts-bar-f {" +
-        "bottom: 9px;" +
+    ".-ts-bar-3{" +
+        "background-position:center bottom;" +
     "}",
-    ".-ts-indicator-e, .-ts-indicator-f, .-ts-bar-part {" +
-        "position: absolute;" +
+    ".-ts-bar-2{" +
+        "height:1px;" +
+        "background-position:center;" +
     "}",
-    ".-ts-bar-part {" +
-        "background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) no-repeat center top;" +
-        "-webkit-background-size: 7px; width: 7px;" +
-        "-webkit-transform-origin: left top;" +
-        "-webkit-transform: translate3d(0,0,0);" +
-    "}",
-    ".-ts-bar-1, .-ts-bar-3 {" +
-        "height: 3px;" +
-    "}",
-    ".-ts-bar-3 {" +
-        "background-position: center bottom;" +
-    "}",
-    ".-ts-bar-2 {" +
-        "height: 1px;" +
-        "background-position: center;" +
-    "}",
-    ".-ts-bar-2 {" +
-        "height: 1px;" +
-        " border-width: 0 1px;" +
+    ".-ts-bar-2{" +
+        "height:1px;" +
     "}"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
