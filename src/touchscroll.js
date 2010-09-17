@@ -82,7 +82,7 @@ TouchScroll.config = {
         factorFlick: 0.2,
 
         /** @type {Number} Maximum bounce (in px) when flicking. */
-        max: 200
+        max: 100
     },
 
     /** @type {Object} Snap back configuration. */
