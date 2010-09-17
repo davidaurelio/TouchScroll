@@ -228,6 +228,9 @@ TouchScroll._styleSheet = (function() {
         "position:relative;" +
         "height:auto;" +
     "}",
+    ".-ts-inner>*{" +
+        "-webkit-transform-style:flat;" +
+    "}",
     ".-ts-bars{" +
         "bottom:0;" +
         "left:0;" +
@@ -277,6 +280,7 @@ TouchScroll._styleSheet = (function() {
         "-webkit-background-size:7px; " +
         "width: 7px;" +
         "-webkit-transform-origin:0 0;" +
+        "-webkit-transform-style:preserve-3d;" +
     "}",
     ".-ts-bar-1,.-ts-bar-3{" +
         "height:3px;" +
