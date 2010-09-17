@@ -637,28 +637,24 @@ TouchScroll.prototype = {
     },
 
     onTransitionEnd: function onTranistionEnd(event) {
-        //var target = event.target;
-        //var dom = this._dom;
-        //var scrollers = dom.scrollers;
-        ////var bouncers = scrollers.bouncers;
-        //var axes = this._axes;
-        //
-        //var i = 0, axis;
-        //while ((axis = axes[i++])) {
-        //    var isBouncer = target === bouncers[axis];
-        //
-        //    if (isBouncer || target === scrollers[axis]) {
-        //        if (isBouncer) {
-        //            this.snapBack(axis);
-        //        }
-        //        if (0 === --this._numTransitions) {
-        //            this._endScroll();
-        //        }
-        //
-        //        if (this.scrollevents) { this._fireScrollEvent(); }
-        //        return;
-        //    }
-        //}
+        var target = event.target;
+        var dom = this._dom;
+        var scrollers = dom.scrollers;
+        var axes = this._axes;
+
+        var i = 0, axis;
+        while ((axis = axes[i++])) {
+            if (target === scrollers[axis]) {
+                this.snapBack(axis);
+
+                if (0 === --this._numTransitions) {
+                    this._endScroll();
+                }
+
+                if (this.scrollevents) { this._fireScrollEvent(); }
+                return;
+            }
+        }
     },
 
     /**
@@ -857,12 +853,12 @@ TouchScroll.prototype = {
      * Scrolls back to the bounds of the scroller if the scroll position
      * exceeds these.
      *
-     * @param {String|null} [axis] Which axis to snap back. `null` snaps back
-     *                             both axes.
+     * @param {String|null} [snapAxis] Which axis to snap back. `null` snaps
+     *                                 back both axes.
      * @returns {Boolean} Whether the scroller was beyond regular bounds.
      */
-    snapBack: function snapBack(axis, duration) {
-        var axes = axis ? [axis] : this._activeAxes;
+    snapBack: function snapBack(snapAxis, duration) {
+        var axes = snapAxis ? [snapAxis] : this._activeAxes;
 
         var snapBackConfig = this.config.snapBack;
         if (typeof duration === "undefined") { duration = snapBackConfig.defaultTime; }
@@ -885,22 +881,26 @@ TouchScroll.prototype = {
         var scrollOffset = this._determineOffset(true);
         var maxOffset = this._maxOffset;
 
-        var i = 0, snapAxis;
+        var i = 0, axis;
         var zeroMatrix = new this._Matrix(), matrix;
 
+        var snapsBack = false;
+
         var offsetSpecs = [], numOffsetSpecs = 0;
-        while ((snapAxis = axes[i++])) {
-            var offset = scrollOffset[snapAxis];
-            var minOffset = -maxOffset[snapAxis];
+        while ((axis = axes[i++])) {
+            var offset = scrollOffset[axis];
+            var minOffset = -maxOffset[axis];
             if (offset >= minOffset && offset <= 0) {
                 continue;
             }
 
+            snapsBack = true;
+
             // snap back bouncer layer
             matrix = zeroMatrix.translate(0, 0, 0);
-            matrix[axis] = scrollOffset > 0 ? 0 : maxOffset[axis];
+            matrix[axis] = offset > 0 ? 0 : -maxOffset[axis];
             offsetSpecs[numOffsetSpecs++] = {
-                style: scrollers[snapAxis].style,
+                style: scrollers[axis].style,
                 matrix: matrix,
                 duration: duration,
                 timingFunc: timingFunc
@@ -912,7 +912,7 @@ TouchScroll.prototype = {
 
             // snap back bars
             if (hasBars) {
-                var size = barSizes[snapAxis];
+                var size = barSizes[axis];
                 var scale = size - 2 * tipSize;
                 var barDuration = duration;
                 var barTimingFunc = timingFunc;
@@ -924,7 +924,7 @@ TouchScroll.prototype = {
                     barTimingFunc = bezier.divideAtT(t)[1];
                 }
 
-                var parts = barParts[snapAxis];
+                var parts = barParts[axis];
                 var barDelay = duration - barDuration;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: parts[0].style,
@@ -951,6 +951,8 @@ TouchScroll.prototype = {
         }
 
         this._setStyleOffset(offsetSpecs);
+        if (snapsBack) { this.showScrollbars(); }
+        return snapsBack;
     },
 
     /**
@@ -1241,7 +1243,7 @@ TouchScroll.prototype = {
                     duration: durationBounce
                 };
                 this._setStyleOffset(bounceSpecs, durationFlick);
-                this._numTransitions++;
+                //this._numTransitions++; //FIXME: In theory, this should be necessary, but setting styles with timeout seems to prevent webkitTransitionEnd
             }
         }
         this._setStyleOffset(offsetSpecs, 0);
@@ -1660,6 +1662,7 @@ TouchScroll.prototype = {
             }
         }
         this._setStyleOffset(offsetSpecs);
+        this._numTransitions = 0;
     }
 };
 
