@@ -210,9 +210,6 @@ TouchScroll._styleSheet = (function() {
         "position:relative;" +
         "display:-webkit-box;" +
     "}",
-    ".TouchScroll.scrolling{" +
-        "-webkit-user-select:none;" +
-    "}",
     ".-ts-layer{" +
         "-webkit-transition-property:-webkit-transform;" +
         "-webkit-transform:translate3d(0,0,0);" +
@@ -228,8 +225,13 @@ TouchScroll._styleSheet = (function() {
         "position:relative;" +
         "height:auto;" +
     "}",
-    ".-ts-inner>*{" +
+    ".-ts-inner {" +
+        "position:static;" +
         "-webkit-transform-style:flat;" +
+    "}",
+    ".-ts-inner.scrolling{" +
+        "-webkit-user-select:none;" +
+        "pointer-events:none;" +
     "}",
     ".-ts-bars{" +
         "bottom:0;" +
@@ -430,7 +432,9 @@ TouchScroll.prototype = {
     */
    _scrollerTemplate: [
             '<div class="-ts-layer -ts-outer">', // scrolling layer y-axis
-                '<div class="-ts-layer -ts-inner"></div>', // scrolling layer x-axis
+                '<div class="-ts-layer">', // scrolling layer x-axis
+                    '<div class="-ts-layer -ts-inner"></div>', // wrapper
+                '</div>',
             '</div>',
             '<div class="-ts-bars"></div>'
         ].join(""),
@@ -570,9 +574,9 @@ TouchScroll.prototype = {
                 this._dom.outer.style.webkitUserSelect = "none";
                 this.showScrollbars();
             }
-            if (scrollBegan && TouchScroll._hasTouchSupport) {
+            if (scrollBegan) {
                 // catch pointer events with the scrollbar layer
-                this._dom.bars.outer.style.pointerEvents = "auto";
+                this._dom.scrollers.inner.className += " scrolling";
             }
         }
 
@@ -632,7 +636,7 @@ TouchScroll.prototype = {
 
         this._lastEvents[0] = this._lastEvents[1] = null;
         if (this._numTransitions === 0) {
-            this.hideScrollbars();
+            this._endScroll();
         }
     },
 
@@ -1045,9 +1049,8 @@ TouchScroll.prototype = {
      * Does cleanup work after ending a scroll.
      */
     _endScroll: function _endScroll() {
-        var dom = this._dom;
-        dom.bars.outer.style.pointerEvents = "";
-        dom.outer.style.webkitUserSelect = "";
+        var innerScroller = this._dom.scrollers.inner;
+        innerScroller.className = innerScroller.className.replace(/ scrolling/g, '');
         this.hideScrollbars();
     },
 
