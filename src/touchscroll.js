@@ -409,7 +409,7 @@ TouchScroll.prototype = {
         touchend: "onTouchEnd",
         mouseup: "onTouchEnd",
         touchcancel: "onTouchEnd",
-        DOMSubtreeModified: "setupScroller",
+        DOMSubtreeModified: "onDOMChange",
         focus: "onChildFocused"
     },
 
@@ -530,6 +530,10 @@ TouchScroll.prototype = {
         if (doScroll) {
             this.scrollTo(offsetLeft, offsetTop, 100);
         }
+    },
+
+    onDOMChange: function onDOMChange(){
+        this.setupScroller();
     },
 
     onTouchStart: function onTouchStart(event) {
@@ -943,7 +947,12 @@ TouchScroll.prototype = {
         }
 
         this._setStyleOffset(offsetSpecs);
-        if (snapsBack) { this.showScrollbars(); }
+        if (snapsBack) {
+            this.showScrollbars();
+        }
+        else if (!snapAxis) {
+            this._endScroll();
+        }
         return snapsBack;
     },
 
@@ -1037,8 +1046,7 @@ TouchScroll.prototype = {
      * Does cleanup work after ending a scroll.
      */
     _endScroll: function _endScroll() {
-        var innerScroller = this._dom.scrollers.inner;
-        innerScroller.className = "-ts-layer -ts-inner";
+        this._dom.scrollers.inner.className = "-ts-layer -ts-inner";
         this.hideScrollbars();
     },
 
@@ -1258,7 +1266,7 @@ TouchScroll.prototype = {
         var that = this;
         var timeouts = this._scrollTimeouts;
         timeouts[timeouts.length] = setTimeout(function() {
-            that.hideScrollbars();
+            that._endScroll();
         }, maxDuration);
 
         if (this.scrollevents && maxDuration) {
