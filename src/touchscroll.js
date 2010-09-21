@@ -581,12 +581,9 @@ TouchScroll.prototype = {
                 threshold <= -scrollOffset.f;
 
             if (scrollBegan) {
-                this._dom.outer.style.webkitUserSelect = "none";
                 this.showScrollbars();
-            }
-            if (scrollBegan) {
                 // catch pointer events with the scrollbar layer
-                this._dom.scrollers.inner.className += " scrolling";
+                this._dom.scrollers.inner.className = "-ts-layer -ts-inner scrolling";
             }
         }
 
@@ -608,6 +605,7 @@ TouchScroll.prototype = {
         }
 
         event.preventDefault();
+        event.stopPropagation();
         this._isTracking = this._scrollBegan = false;
 
         // calculate flick
@@ -1062,7 +1060,7 @@ TouchScroll.prototype = {
      */
     _endScroll: function _endScroll() {
         var innerScroller = this._dom.scrollers.inner;
-        innerScroller.className = innerScroller.className.replace(/ scrolling/g, '');
+        innerScroller.className = "-ts-layer -ts-inner";
         this.hideScrollbars();
     },
 
