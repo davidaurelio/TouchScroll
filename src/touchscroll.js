@@ -278,21 +278,22 @@ TouchScroll._styleSheet = (function() {
         "position:absolute;" +
     "}",
     ".-ts-bar-part{" +
-        "background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) no-repeat center 0;" +
-        "-webkit-background-size:7px; " +
         "width: 7px;" +
+        "-webkit-border-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOBAMAAADtZjDiAAAALVBMVEUAAAD///8AAAD///+kpKT///////////////////8nJycBAQEJCQn///9YWFgbIh+zAAAAD3RSTlOATQASUTVFQwMkaIB3TFtjuC6yAAAATElEQVQI12NQ0piaFtmkxKBkLigoWKzEoHzR68wSWSOGdrkNDNwPKxgmejMwMGyRZAhcAKS5RBkSDwBpHjE4DROHqYPpg5kDMxdqDwDB4xorHHHNdAAAAABJRU5ErkJggg==) 6 stretch;" +
+        "-webkit-box-sizing:border-box;"+
         "-webkit-transform-origin:0 0;" +
         //"-webkit-transform-style:preserve-3d;" +
     "}",
     ".-ts-bar-1,.-ts-bar-3{" +
-        "height:3px;" +
+        "border-width:3px 3px 0;" +
+        "height:0;" +
     "}",
     ".-ts-bar-3{" +
-        "background-position:center bottom;" +
+        "border-width:0 3px 3px;" +
     "}",
     ".-ts-bar-2{" +
         "height:1px;" +
-        "background-position:center;" +
+        "border-width:0 3px;" +
     "}",
     ".-ts-bar-2{" +
         "height:1px;" +
@@ -370,9 +371,6 @@ function TouchScroll(scrollElement, options) {
         scrollHeight: -1
     };
 
-    /** @type {Number} Stores the number of running transitions (on layers) */
-    this._numTransitions = 0;
-
     /** @type {Boolean} Whether the scroll threshold has been exceeded. */
     this._scrollBegan = false;
 
@@ -411,7 +409,6 @@ TouchScroll.prototype = {
         touchend: "onTouchEnd",
         mouseup: "onTouchEnd",
         touchcancel: "onTouchEnd",
-        webkitTransitionEnd: "onTransitionEnd",
         DOMSubtreeModified: "setupScroller",
         focus: "onChildFocused"
     },
@@ -643,30 +640,6 @@ TouchScroll.prototype = {
         }
 
         this._lastEvents[0] = this._lastEvents[1] = null;
-        if (this._numTransitions === 0) {
-            this._endScroll();
-        }
-    },
-
-    onTransitionEnd: function onTranistionEnd(event) {
-        var target = event.target;
-        var dom = this._dom;
-        var scrollers = dom.scrollers;
-        var axes = this._axes;
-
-        var i = 0, axis;
-        while ((axis = axes[i++])) {
-            if (target === scrollers[axis]) {
-                this.snapBack(axis);
-
-                if (0 === --this._numTransitions) {
-                    this._endScroll();
-                }
-
-                if (this.scrollevents) { this._fireScrollEvent(); }
-                return;
-            }
-        }
     },
 
     /**
@@ -819,7 +792,7 @@ TouchScroll.prototype = {
             offsetRatios.e = barMaxOffset.e / -scrollWidth;
             offsetRatios.f = barMaxOffset.f / -scrollHeight;
 
-            var parts, size, scale, offset, barMatrix;
+            var parts, size, scale, offset;
             i = 0;
             axes = activeAxes;
             while ((axis = axes[i++])) {
@@ -829,8 +802,7 @@ TouchScroll.prototype = {
                 scale = size - tipSize * 2;
                 barMetrics.maxOffset[axis] = availLength[axis] - size;
                 offset = offsetRatios[axis] * scrollOffset[axis];
-                barMatrix = zeroMatrix.translate(0, tipSize, 0);
-                barMatrix.d = scale;
+                parts[1].style.height = scale + "px";
                 offsetSpecs.push(
                     {
                         style: parts[3].style,
@@ -838,7 +810,7 @@ TouchScroll.prototype = {
                     },
                     {
                         style: parts[1].style,
-                        matrix: barMatrix
+                        matrix: {e: 0, f: tipSize}
                     },
                     {
                         style: parts[2].style,
@@ -869,7 +841,16 @@ TouchScroll.prototype = {
      *                                 back both axes.
      * @returns {Boolean} Whether the scroller was beyond regular bounds.
      */
-    snapBack: function snapBack(snapAxis, duration) {
+    snapBack: function snapBack(snapAxis, duration, timeout) {
+        if (timeout > 0) {
+            var timeouts = this._scrollTimeouts;
+            var that = this;
+            timeouts[timeouts.length] = setTimeout(function() {
+                that.snapBack();
+            }, timeout);
+            return null;
+        }
+
         var axes = snapAxis ? [snapAxis] : this._activeAxes;
 
         var snapBackConfig = this.config.snapBack;
@@ -917,7 +898,6 @@ TouchScroll.prototype = {
                 duration: duration,
                 timingFunc: timingFunc
             };
-            this._numTransitions++;
 
             var bounceAtEnd = offset < 0;
             var snapBackLength = bounceAtEnd ? minOffset - offset : offset;
@@ -945,11 +925,9 @@ TouchScroll.prototype = {
                     duration: barDuration,
                     timingFunc: barTimingFunc
                 };
-                var barMatrix = zeroMatrix.translate(0, tipSize, 0);
-                barMatrix.d = scale;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: parts[1].style,
-                    matrix: barMatrix,
+                    matrix: {e: 0, f: tipSize},
                     delay: barDelay,
                     duration: barDuration,
                     timingFunc: barTimingFunc
@@ -1101,13 +1079,16 @@ TouchScroll.prototype = {
         var configBounceFactor = configElasticity.factorFlick;
         var maxBounceLength = configElasticity.max;
 
+        var configSnapBack = config.snapBack;
+        var configSnapBackAlwaysDefaultTime = configSnapBack.alwaysDefaultTime;
+        var configSnapBackDefaultTime = configSnapBack.defaultTime;
+
         var flickTarget = scrollOffset.multiply(vector);
         var zeroMatrix = new this._Matrix();
 
         var offsetSpecs = [], numOffsetSpecs = 0;
         var bounceSpecs, numBounceSpecs; // set individually for each axis
-
-        var maxDuration = 0;
+        var maxDuration = 0, animDuration;
 
         // flick for every axis
         var i = 0, axes = this._activeAxes, axis;
@@ -1137,8 +1118,9 @@ TouchScroll.prototype = {
 
             // calculate timing functions
             var t = timingFunc.getTforY(distanceFlick / distance, epsilon);
-            if (t < 0) { // already beyond scroller bounds
+            if (t < 0 || t > 1) { // already beyond scroller bounds
                 t = 0;
+                distanceFlick = 0;
                 distanceBounce = distance;
             }
 
@@ -1146,9 +1128,8 @@ TouchScroll.prototype = {
             var timingFuncFlick = bezierCurves[0];
             var timingFuncBounce = timingFuncFlick;
 
-            var durationFlick = duration * timingFunc.getPointForT(t).x;
+            var durationFlick = animDuration = duration * timingFunc.getPointForT(t).x;
             var durationBounce = duration - durationFlick;
-            if (durationFlick > maxDuration) { maxDuration = durationFlick; }
 
             var bounceSign, distanceBounceAbs;
             if (isElastic && distanceBounce) {
@@ -1185,7 +1166,6 @@ TouchScroll.prototype = {
                     timingFunc: timingFuncFlick,
                     duration: durationFlick
                 };
-                this._numTransitions++;
             }
 
             var parts = barParts && barParts[axis];
@@ -1199,47 +1179,48 @@ TouchScroll.prototype = {
             }
 
             if (isElastic && distanceBounce) {
+                animDuration += durationBounce;
                 bounceSpecs = [];
                 numBounceSpecs = 0;
 
                 if (hasBars) {
-                    var barScale = barSizes[axis] - 2 * barTipSize;
+                    var barSize = barSizes[axis] - 2 * barTipSize;
 
-                    // reset potential bar scaling. Will be applied with the flick
-                    offsetSpecs[numOffsetSpecs++] = {
-                        style: parts[0].style,
-                        matrix: {e: 0, f: 0}
-                    };
-                    var barMatrix = zeroMatrix.translate(0, barTipSize, 0);
-                    barMatrix.d = barScale;
-                    offsetSpecs[numOffsetSpecs++] = {
-                        style: parts[1].style,
-                        matrix: barMatrix
-                    };
-                    offsetSpecs[numOffsetSpecs++] = {
-                        style: parts[2].style,
-                        matrix: {e: 0, f: barScale + barTipSize}
-                    };
+                    if (distanceFlick) {
+                        // reset potential bar scaling. Will be applied with the flick
+                        offsetSpecs[numOffsetSpecs++] = {
+                            style: parts[0].style,
+                            matrix: {e: 0, f: 0}
+                        };
+                        offsetSpecs[numOffsetSpecs++] = {
+                            style: parts[1].style,
+                            matrix: {e: 0, barTargetSize: 0}
+                        };
+                        offsetSpecs[numOffsetSpecs++] = {
+                            style: parts[2].style,
+                            matrix: {e: 0, f: barSize + barTipSize}
+                        };
+                    }
 
                     // bounce scrollbar
                     var durationBounceBar = durationBounce;
                     var timingFuncBounceBar = timingFuncBounce;
-                    var barTargetSize = ~~(barScale - distanceBounceAbs + 0.5); // round
+                    var barTargetSize = ~~(barSize - distanceBounceAbs + 0.5); // round
                     if (barTargetSize < 1) { barTargetSize = 1; }
-                    if (distanceBounceAbs > barScale) {
-                        t = timingFuncBounceBar.getTforY(barScale / distanceBounceAbs, epsilon);
+                    if (distanceBounceAbs > barSize) {
+                        t = timingFuncBounceBar.getTforY(barSize/ distanceBounceAbs, epsilon);
                         var timeFraction = timingFuncBounce.getPointForT(t).x;
                         durationBounceBar *= timeFraction;
                         timingFuncBounceBar = timingFuncBounceBar.divideAtT(t)[0];
                     }
-                    var barOffset = distanceBounce < 0 ? barScale - barTargetSize : 0;
+                    var barOffset = distanceBounce < 0 ? barSize - barTargetSize : 0;
                     bounceSpecs[numBounceSpecs++] = {
                         style: parts[0].style,
                         matrix: {e: 0, f: barOffset},
                         duration: durationBounceBar
                     };
                     var barMatrix = zeroMatrix.translate(0, barOffset + barTipSize, 0);
-                    barMatrix.d = barTargetSize;
+                    barMatrix.d = barTargetSize/barSize;
                     bounceSpecs[numBounceSpecs++] = {
                         style: parts[1].style,
                         matrix: barMatrix,
@@ -1260,13 +1241,27 @@ TouchScroll.prototype = {
                     duration: durationBounce
                 };
                 this._setStyleOffset(bounceSpecs, durationFlick);
-                //this._numTransitions++; //FIXME: In theory, this should be necessary, but setting styles with timeout seems to prevent webkitTransitionEnd
+                animDuration += durationBounce;
+
+                var durationSnapBack = configSnapBackAlwaysDefaultTime ? configSnapBackDefaultTime : durationBounce;
+                this.snapBack(axis, durationSnapBack, animDuration);
+                animDuration += durationSnapBack;
             }
+
+            if (animDuration > maxDuration) {
+                maxDuration = animDuration;
+            }
+
         }
         this._setStyleOffset(offsetSpecs, 0);
 
+        var that = this;
+        var timeouts = this._scrollTimeouts;
+        timeouts[timeouts.length] = setTimeout(function() {
+            that.hideScrollbars();
+        }, maxDuration);
+
         if (this.scrollevents && maxDuration) {
-            var that = this;
             var iterations = 0;
             var interval = setInterval(function() {
                 if (++iterations * 100 < maxDuration) {
@@ -1277,6 +1272,7 @@ TouchScroll.prototype = {
                 }
             }, 100);
         }
+
     },
 
     _fireScrollEvent: function _fireScrollEvent() {
@@ -1338,8 +1334,7 @@ TouchScroll.prototype = {
         [
             eventNames.start,
             eventNames.move,
-            eventNames.end,
-            "webkitTransitionEnd"
+            eventNames.end
         ].forEach(function(type) { scrollElement.addEventListener(type, this, false); }, this);
 
         innerScroller.addEventListener("DOMSubtreeModified", this, false);
@@ -1540,7 +1535,7 @@ TouchScroll.prototype = {
 
                 // middle indicator part
                 var barMatrix = zeroMatrix.translate(0, partsOffset + tipSize, 0);
-                barMatrix.d = size;
+                barMatrix.d = size/defaultSize;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: parts[1].style,
                     matrix: barMatrix
@@ -1594,19 +1589,28 @@ TouchScroll.prototype = {
                 beginTransform = "translate(";
                 endTransform = ")";
             }
-            var style, matrix, timingFunc;
+            var style, matrix, timingFunc, duration;
             var spec, i = 0;
             while ((spec = specs[i++])) {
                 style = spec.style;
                 matrix = spec.matrix;
+                duration = spec.duration;
                 timingFunc = spec.timingFunc;
-                timingFunc = timingFunc && timingFunc.join ?
-                        "cubic-bezier(" + timingFunc.join(",") + ")" :
-                        timingFunc;
+                if (timingFunc) {
+                    timingFunc = timingFunc && timingFunc.join ?
+                            "cubic-bezier(" + timingFunc.join(",") + ")" :
+                            timingFunc;
+                }
+                else {
+                    timingFunc = "";
+                }
 
-                style.webkitTransitionDuration = (spec.duration || 0) + "ms";
-                style.webkitTransitionTimingFunction = timingFunc;
-                style.webkitTransitionDelay = (spec.delay || 0) + "ms";
+                //style.webkitTransitionDuration = (spec.duration || 0) + "ms";
+                //style.webkitTransitionTimingFunction = timingFunc;
+                //style.webkitTransitionDelay = (spec.delay || 0) + "ms";
+                style.webkitTransition = duration ?
+                    "-webkit-transform " + timingFunc + " " + spec.duration + "ms " + (spec.delay || 0) + "ms" :
+                    "";
 
                 var scaleY = matrix.d;
                 style.webkitTransform = scaleY && scaleY !== 1 ?
@@ -1624,6 +1628,7 @@ TouchScroll.prototype = {
         for (var i = 0, len = timeouts.length; i < len; i++) {
             clearTimeout(timeouts[i]);
         }
+        timeouts.length = 0;
 
         var dom = this._dom;
         var scrollers = this._dom.scrollers;
@@ -1673,11 +1678,9 @@ TouchScroll.prototype = {
                     matrix: {e: 0, f: 0}
                 };
 
-                var barMatrix = zeroMatrix.translate(0, barTipSize, 0);
-                barMatrix.d = barSize;
                 offsetSpecs[j++] = {
                     style: parts[1].style,
-                    matrix: barMatrix
+                    matrix: {e: 0, f: barTipSize}
                 };
 
                 offsetSpecs[j++] = {
@@ -1687,7 +1690,6 @@ TouchScroll.prototype = {
             }
         }
         this._setStyleOffset(offsetSpecs);
-        this._numTransitions = 0;
     }
 };
 
@@ -1697,7 +1699,7 @@ TouchScroll.prototype = {
     [
         "scrollTop",
         function() {
-            var offset = this._numTransitions ? this._determineOffset() : this._scrollOffset;
+            var offset = this._scrollTimeouts.length ? this._determineOffset() : this._scrollOffset;
             return -offset.f;
         },
         function (val) {
@@ -1707,7 +1709,7 @@ TouchScroll.prototype = {
     [
         "scrollLeft",
         function() {
-            var offset = this._numTransitions ? this._determineOffset() : this._scrollOffset;
+            var offset = this._scrollTimeouts.length ? this._determineOffset() : this._scrollOffset;
             return -offset.e;
         },
         function (val) {
