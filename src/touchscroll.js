@@ -633,7 +633,7 @@ TouchScroll.prototype = {
             flickDistance = flick[1];
         }
 
-        if (flickAllowed && flick[0] && flick[1]) {
+        if (flickAllowed && flickDuration && flickDistance) {
             var flickVector = new this._Matrix();
             flickVector.e = moveX / moveDistance * flickDistance;
             flickVector.f = moveY / moveDistance * flickDistance;
