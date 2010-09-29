@@ -1097,7 +1097,8 @@ TouchScroll.prototype = {
 
         var offsetSpecs = [], numOffsetSpecs = 0;
         var bounceSpecs, numBounceSpecs; // set individually for each axis
-        var maxDuration = 0, animDuration;
+        var maxDuration = 0;
+        var animDuration;
 
         // flick for every axis
         var i = 0, axes = this._activeAxes, axis;
@@ -1168,7 +1169,7 @@ TouchScroll.prototype = {
 
             // queue each transition
             // flick
-            var scrollerStyle = scrollers[axis].style
+            var scrollerStyle = scrollers[axis].style;
             if (distanceFlick) {
                 offsetSpecs[numOffsetSpecs++] = {
                     style: scrollerStyle,
@@ -1544,7 +1545,7 @@ TouchScroll.prototype = {
                 }
 
                 // middle indicator part
-                var barMatrix = zeroMatrix.translate(0, partsOffset + tipSize, 0);
+                barMatrix = zeroMatrix.translate(0, partsOffset + tipSize, 0);
                 barMatrix.d = size/defaultSize;
                 offsetSpecs[numOffsetSpecs++] = {
                     style: parts[1].style,
@@ -1590,7 +1591,7 @@ TouchScroll.prototype = {
             t[t.length] = setTimeout(function() {_setStyleOffset(specs);}, timeout);
         }
         else {
-            var beginTransform, endTransform
+            var beginTransform, endTransform;
             if (this._has3d) {
                 beginTransform = "translate3d(";
                 endTransform = ", 0)";
@@ -1653,10 +1654,11 @@ TouchScroll.prototype = {
         var barSizes = barMetrics.sizes;
 
         var zeroMatrix = new this._Matrix();
-        var i = 0, axes = this._axes, axis, axisOffset, axisMaxOffset;
+        var axes = this._axes, axis, axisOffset, axisMaxOffset;
         var matrix, parts, part, barSize, barOffset;
 
         var offsetSpecs = [], j = 0;
+        i = 0;
         while ((axis = axes[i++])) {
             axisOffset = offset[axis];
             axisMaxOffset = -maxOffset[axis];
