@@ -318,8 +318,23 @@ function TouchScroll(scrollElement, options) {
     /** @type {Boolean} Whether to fire DOM scroll events */
     this.scrollevents = !!options.scrollevents;
 
+
+    var snapToGrid =
+        /** @type {Boolean} Whether to snap to a 100%x100%-grid -- "paging mode". */
+        this.snapToGrid = !!options.snapToGrid;
+
+    /** @type {Object} Contains the number of segments for each axis (for paging mode). */
+    this.maxSegments = {e: 1, f: 1};
+
+    /** @type {Object} Contains the current of segments for each axis (for paging mode). */
+    this.currentSegment = {e: 0, f: 0};
+
+
     /** @type {Boolean} Whether to build and use scrollbars. */
-    var useScrollbars = "scrollbars" in options ?  !!options.scrollbars : true;
+    var useScrollbars = !snapToGrid;
+    if (useScrollbars && "scrollbars" in options) {
+        useScrollbars = !!options.scrollbars;
+    }
 
     /**
      * An array of timeout handles for queued animations and actions that have
@@ -371,6 +386,9 @@ function TouchScroll(scrollElement, options) {
         scrollWidth: -1,
         scrollHeight: -1
     };
+
+    /** @type {Object} Stores the relevant metrics of the innermost scrolling layer. */
+    this._innerSize = null;
 
     /** @type {Boolean} Whether the scroll threshold has been exceeded. */
     this._scrollBegan = false;
@@ -732,10 +750,24 @@ TouchScroll.prototype = {
             return isScrolling[axis];
         });
 
+        var scrollers = dom.scrollers
+        var innerNode = scrollers.inner;
+        var innerOffsetWidth = innerNode.offsetWidth;
+        var innerOffsetHeight = innerNode.offsetHeight;
+        var innerScrollWidth = innerNode.scrollWidth;
+        var innerScrollHeight = innerNode.scrollHeight;
+
+        var innerSize = this._innerSize = {e: innerOffsetWidth, f: innerOffsetHeight};
+
+        this.maxSegments = {
+            e: Math.ceil(innerScrollWidth / innerOffsetWidth),
+            f: Math.ceil(innerScrollHeight / innerOffsetHeight)
+        };
+
         // force scrollers into bounds
         var offsetSpecs = [];
         var scrollOffset = this._scrollOffset;
-        var scrollers = dom.scrollers, zeroMatrix = new this._Matrix(), matrix;
+        var zeroMatrix = new this._Matrix(), matrix;
         var i = 0, axes = this._axes, axis;
         while ((axis = axes[i++])) {
             var axisOffset = scrollOffset[axis];
@@ -866,6 +898,14 @@ TouchScroll.prototype = {
         var scrollers = dom.scrollers;
         var bars = dom.bars;
         var hasBars = !!bars;
+        var snapToGrid = this.snapToGrid;
+
+        var innerSize, maxSegments, currentSegments;
+        if (snapToGrid) {
+            innerSize = this._innerSize;
+            maxSegments = this.maxSegments;
+            currentSegments = this.currentSegment;
+        }
 
         var barMetrics, barSizes, tipSize, barMaxOffset, barParts;
         if (hasBars) {
@@ -877,7 +917,7 @@ TouchScroll.prototype = {
         }
 
         var scrollOffset = this._determineOffset(true);
-        var maxOffset = this._maxOffset;
+        var maxOffsets = this._maxOffset;
 
         var i = 0, axis;
         var zeroMatrix = new this._Matrix(), matrix;
@@ -887,8 +927,25 @@ TouchScroll.prototype = {
         var offsetSpecs = [], numOffsetSpecs = 0;
         while ((axis = axes[i++])) {
             var offset = scrollOffset[axis];
-            var minOffset = -maxOffset[axis];
-            if (offset >= minOffset && offset <= 0) {
+            var maxOffset = 0;
+            var minOffset = -maxOffsets[axis];
+
+            if (snapToGrid) {
+                var axisInnerSize = innerSize[axis];
+                var currentSegment = -Math.floor((offset + 0.5*axisInnerSize) / axisInnerSize);
+                var axisMaxSegments = maxSegments[axis];
+                if (currentSegment < 0) {
+                    currentSegment = 0;
+                }
+                else if (currentSegment >= axisMaxSegments) {
+                    currentSegment = axisMaxSegments - 1;
+                }
+                minOffset = maxOffset = -currentSegment * axisInnerSize;
+                currentSegments[axis] = currentSegment;
+                //TODO: fire segment change
+            }
+
+            if (offset >= minOffset && offset <= maxOffset) {
                 continue;
             }
 
@@ -896,7 +953,7 @@ TouchScroll.prototype = {
 
             // snap back bouncer layer
             matrix = zeroMatrix.translate(0, 0, 0);
-            matrix[axis] = offset > 0 ? 0 : -maxOffset[axis];
+            matrix[axis] = offset > maxOffset ? maxOffset : minOffset;
             offsetSpecs[numOffsetSpecs++] = {
                 style: scrollers[axis].style,
                 matrix: matrix,
@@ -904,8 +961,8 @@ TouchScroll.prototype = {
                 timingFunc: timingFunc
             };
 
-            var bounceAtEnd = offset < 0;
-            var snapBackLength = bounceAtEnd ? minOffset - offset : offset;
+            var bounceAtEnd = offset < minOffset;
+            var snapBackLength = bounceAtEnd ? minOffset - offset : offset - maxOffset;
 
             // snap back bars
             if (hasBars) {
@@ -1069,6 +1126,14 @@ TouchScroll.prototype = {
         var bars = dom.bars;
         var hasBars = !!bars;
 
+        var maxSegments, currentSegments, innerSizes;
+        var snapToGrid = this.snapToGrid;
+        if(snapToGrid){
+            maxSegments = this.maxSegments;
+            currentSegments = this.currentSegment;
+            innerSizes = this._innerSize;
+        }
+
         var barMetrics, barOffsetRatios, barTipSize, barSizes, barParts;
         if (hasBars) {
             barMetrics = this._barMetrics;
@@ -1113,6 +1178,28 @@ TouchScroll.prototype = {
             var axisMax = 0;
             var scrollFrom = scrollOffset[axis];
 
+            if(snapToGrid){
+                var innerSize = innerSizes[axis];
+                var segmentIncrement = distance > 0 ? -1 : 1;
+                var maxSegment = maxSegments[axis];
+                var currentSegment = currentSegments[axis];
+                var flickToSegment = currentSegment + segmentIncrement;
+                if(flickToSegment < 0){
+                    flickToSegment = 0;
+                }else if(maxSegment <= flickToSegment){
+                    flickToSegment = maxSegment - 1;
+                }
+                currentSegments[axis] = flickToSegment;
+                //TODO: fire segment change
+
+                if(flickToSegment === currentSegment){
+                    this.snapBack(axis);
+                    continue;
+                }
+
+                axisMin = axisMax = -flickToSegment * innerSize;
+            }
+
             var distanceFlick = distance;
 
             // compute distance fraction where flicking crosses the bounds of the scroller.
@@ -1124,7 +1211,7 @@ TouchScroll.prototype = {
                 distanceFlick = axisMax - scrollFrom;
                 targetFlick = axisMax;
             }
-            var distanceBounce = distance - distanceFlick;
+            var distanceBounce = snapToGrid ? 0 : distance - distanceFlick;
 
             // calculate timing functions
             var t = timingFunc.getTforY(distanceFlick / distance, epsilon);
