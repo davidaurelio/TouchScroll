@@ -1137,8 +1137,9 @@ TouchScroll.prototype = {
             var timingFuncFlick = bezierCurves[0];
             var timingFuncBounce = timingFuncFlick;
 
-            var durationFlick = animDuration = duration * timingFunc.getPointForT(t).x;
+            var durationFlick = duration * timingFunc.getPointForT(t).x;
             var durationBounce = duration - durationFlick;
+            animDuration = durationFlick;
 
             var bounceSign, distanceBounceAbs;
             if (isElastic && distanceBounce) {
