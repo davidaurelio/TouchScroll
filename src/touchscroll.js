@@ -754,14 +754,17 @@ TouchScroll.prototype = {
         var innerNode = scrollers.inner;
         var innerOffsetWidth = innerNode.offsetWidth;
         var innerOffsetHeight = innerNode.offsetHeight;
-        var innerScrollWidth = innerNode.scrollWidth;
-        var innerScrollHeight = innerNode.scrollHeight;
 
         var innerSize = this._innerSize = {e: innerOffsetWidth, f: innerOffsetHeight};
 
+        //FIXME: the scroll width of the inner layer is not reported correctly,
+        // so we have to use the scrollWidth/Height of the scroller elements
+        // to calculate the number of segments.
+        // maxsegments will not be correct if the scroller has padding.
+
         this.maxSegments = {
-            e: Math.ceil(innerScrollWidth / innerOffsetWidth),
-            f: Math.ceil(innerScrollHeight / innerOffsetHeight)
+            e: Math.ceil(scrollWidth / innerOffsetWidth),
+            f: Math.ceil(scrollHeight / innerOffsetHeight)
         };
 
         // force scrollers into bounds
