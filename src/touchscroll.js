@@ -236,6 +236,7 @@ TouchScroll._styleSheet = (function() {
     ".-ts-bars{" +
         "bottom:0;" +
         "left:0;" +
+        "overflow:hidden;" +
         "pointer-events:none;" +
         "position:absolute;" +
         "opacity:0;" +
