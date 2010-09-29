@@ -941,8 +941,15 @@ TouchScroll.prototype = {
                     currentSegment = axisMaxSegments - 1;
                 }
                 minOffset = maxOffset = -currentSegment * axisInnerSize;
-                currentSegments[axis] = currentSegment;
-                //TODO: fire segment change
+
+                if (currentSegment !== currentSegments[axis]) {
+                    currentSegments[axis] = currentSegment;
+                    this._fireEvent("segmentchange", {
+                        axis: axis,
+                        segment: currentSegment,
+                        numSegments: axisMaxSegments
+                    });
+                }
             }
 
             if (offset >= minOffset && offset <= maxOffset) {
@@ -1184,17 +1191,24 @@ TouchScroll.prototype = {
                 var maxSegment = maxSegments[axis];
                 var currentSegment = currentSegments[axis];
                 var flickToSegment = currentSegment + segmentIncrement;
-                if(flickToSegment < 0){
+                if (flickToSegment < 0) {
                     flickToSegment = 0;
-                }else if(maxSegment <= flickToSegment){
+                }
+                else if (maxSegment <= flickToSegment) {
                     flickToSegment = maxSegment - 1;
                 }
                 currentSegments[axis] = flickToSegment;
-                //TODO: fire segment change
 
                 if(flickToSegment === currentSegment){
                     this.snapBack(axis);
                     continue;
+                }
+                else {
+                    this._fireEvent("segmentchange", {
+                        axis: axis,
+                        segment: flickToSegment,
+                        numSegments: maxSegment
+                    });
                 }
 
                 axisMin = axisMax = -flickToSegment * innerSize;
@@ -1363,7 +1377,7 @@ TouchScroll.prototype = {
             var iterations = 0;
             var interval = setInterval(function() {
                 if (++iterations * 100 < maxDuration) {
-                    that._fireScrollEvent();
+                    that._fireEvent("scroll");
                 }
                 else {
                     clearInterval(interval);
@@ -1373,11 +1387,24 @@ TouchScroll.prototype = {
 
     },
 
-    _fireScrollEvent: function _fireScrollEvent() {
-        var scrollEvent = document.createEvent("Event");
-        scrollEvent.touchscroll = this;
-        scrollEvent.initEvent("scroll", true, false);
-        this._dom.outer.dispatchEvent(scrollEvent);
+    /**
+     * Fires a custom event on the scroller element (default is "scroll").
+     *
+     * @param {String} [type] The type of event to fire. Defaults to "scroll".
+     * @param {Object} [properties] All properties of this object will be mixed
+     *                              into the event.
+     */
+    _fireEvent: function _fireEvent(type, properties) {
+        var event = document.createEvent("Event");
+        event.touchscroll = this;
+        if (properties) {
+            for (var prop in properties) {
+                event[prop] = properties[prop];
+            }
+        }
+
+        event.initEvent(type || "scroll", true, false);
+        this._dom.outer.dispatchEvent(event);
     },
 
     /**
@@ -1649,7 +1676,7 @@ TouchScroll.prototype = {
         this._setStyleOffset(offsetSpecs);
         this._scrollOffset = newOffset;
         if (this.scrollevents && offsetSpecs.length) {
-            this._fireScrollEvent();
+            this._fireEvent("scroll");
         }
     },
 
