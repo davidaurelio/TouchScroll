@@ -344,6 +344,12 @@ function TouchScroll(scrollElement, options) {
      */
     this._scrollTimeouts = [];
 
+    /**
+     * If {@link _endScroll} is called with a timeout, the timeout id is stored
+     * here.
+     */
+    this._endTimeout = null;
+
     /** @type {Object} Holds scrollbar related metrics. */
     this._barMetrics = {
         /** @type {Object} Stores the offset height of the scrollbar "tracks". */
@@ -602,13 +608,16 @@ TouchScroll.prototype = {
 
             if (scrollBegan) {
                 this.showScrollbars();
+                clearTimeout(this._endScroll);
                 /*
                     make the inner layer not receive events. The class is set
                     on the parentNode to prevent DOMSubtreeModified to be fired
                     on the inner layer (which would trigger setupScroller).
                 */
                 var innerParent = this._dom.scrollers.inner.parentNode;
-                innerParent._originalClassName = innerParent.className;
+                if (!innerParent._originalClassName) {
+                    innerParent._originalClassName = innerParent.className;
+                }
                 innerParent.className += " scrolling";
             }
         }
@@ -1120,11 +1129,21 @@ TouchScroll.prototype = {
 
     /**
      * Does cleanup work after ending a scroll.
+     *
+     * @param {Number} [timeout] The time (in ms), after which _endScroll
+     *                           should be effectuated.
      */
-    _endScroll: function _endScroll() {
-        var innerParent = this._dom.scrollers.inner.parentNode;
-        innerParent.className = innerParent._originalClassName;
-        this.hideScrollbars();
+    _endScroll: function _endScroll(timeout) {
+        clearTimeout(this._endTimeout);
+        if (timeout > 0) {
+            var that = this;
+            this._endTimeout = setTimeout(function() {that._endScroll()}, timeout);
+        }
+        else {
+            var innerParent = this._dom.scrollers.inner.parentNode;
+            innerParent.className = innerParent._originalClassName;
+            this.hideScrollbars();
+        }
     },
 
     /**
@@ -1377,16 +1396,13 @@ TouchScroll.prototype = {
             }
 
         }
-        this._setStyleOffset(offsetSpecs, 0);
 
-        var that = this;
-        var timeouts = this._scrollTimeouts;
-        timeouts[timeouts.length] = setTimeout(function() {
-            that._endScroll();
-        }, maxDuration);
+        this._setStyleOffset(offsetSpecs, 0);
+        this._endScroll(maxDuration);
 
         if (this.scrollevents && maxDuration) {
             var iterations = 0;
+            var that = this;
             var interval = setInterval(function() {
                 if (++iterations * 100 < maxDuration) {
                     that._fireEvent("scroll");
