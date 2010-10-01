@@ -229,7 +229,7 @@ TouchScroll._styleSheet = (function() {
         "position:relative;" +
         "-webkit-transform-style:flat;" +
     "}",
-    ".-ts-inner.scrolling{" +
+    ".scrolling>.-ts-inner{" +
         "-webkit-user-select:none;" +
         "pointer-events:none;" +
     "}",
@@ -551,7 +551,7 @@ TouchScroll.prototype = {
         }
     },
 
-    onDOMChange: function onDOMChange(){
+    onDOMChange: function onDOMChange(event){
         this.setupScroller();
     },
 
@@ -602,8 +602,14 @@ TouchScroll.prototype = {
 
             if (scrollBegan) {
                 this.showScrollbars();
-                // catch pointer events with the scrollbar layer
-                this._dom.scrollers.inner.className = "-ts-layer -ts-inner scrolling";
+                /*
+                    make the inner layer not receive events. The class is set
+                    on the parentNode to prevent DOMSubtreeModified to be fired
+                    on the inner layer (which would trigger setupScroller).
+                */
+                var innerParent = this._dom.scrollers.inner.parentNode;
+                innerParent._originalClassName = innerParent.className;
+                innerParent.className += " scrolling";
             }
         }
 
@@ -619,7 +625,9 @@ TouchScroll.prototype = {
     },
 
     onTouchEnd: function onTouchEnd(event) {
+        var that=this;
         if (!this._isTracking || !this._scrollBegan) {
+            this._isTracking = this._scrollBegan = false;
             this.hideScrollbars();
             return;
         }
@@ -1114,7 +1122,8 @@ TouchScroll.prototype = {
      * Does cleanup work after ending a scroll.
      */
     _endScroll: function _endScroll() {
-        this._dom.scrollers.inner.className = "-ts-layer -ts-inner";
+        var innerParent = this._dom.scrollers.inner.parentNode;
+        innerParent.className = innerParent._originalClassName;
         this.hideScrollbars();
     },
 
