@@ -1,4 +1,4 @@
-function Scroll(domNode, options) {
+function TouchScroll(domNode, options) {
     this._domNode = domNode;
     this.elastic = this._hasHwAccel && false;
 
@@ -8,7 +8,7 @@ function Scroll(domNode, options) {
     this._initDom();
 }
 
-Scroll.prototype = {
+TouchScroll.prototype = {
     /**
      * Configuration option: The friction factor (per ms) for flicks.
      *
@@ -37,9 +37,24 @@ Scroll.prototype = {
     /**
      * @private
      * @static
+     * @type {boolean} Whether we are dealing with a performant device.
+     */
+    _isPerformantDevice: (function() {
+        var start = new Date().getTime();
+        var iterations = 0;
+        while (new Date().getTime() - start < 20) {
+            Math.random();
+            iterations++;
+        }
+        return iterations > 1000;
+    }()),
+
+    /**
+     * @private
+     * @static
      * @type {boolean} Whether hardware acceleration is available.
      */
-    _hasHwAccel: /^i(?:Phone|Pod|Pad)/.test(navigator.platform), //TODO: is there a better test?
+    _hasHwAccel: /^i(?:Phone|Pod|Pad)/.test(navigator.platform), //TODO: better test
 
     /**
      * @private
@@ -47,7 +62,7 @@ Scroll.prototype = {
      * @type {boolean} Whether touch events are supported.
      */
     _hasTouchEvents: (function() {
-        if ("createTouch" in document) { // True on the iPhone
+        if ("createTouch" in document) { // True on iOS
             return true;
         }
         try {
@@ -158,18 +173,26 @@ Scroll.prototype = {
 
     },
 
+    _endScroll: function _endScroll() {
+
+    },
+
     _flick: function _flick(speedX, speedY) {
         var node = this._domNode;
         var friction = this.flickFriction;
         var scroller = this;
         var lastMove = new Date() - 0;
         var pow = Math.pow;
+        var scrollNode = this._domNode;
 
         function flick() {
             var now = new Date() - 0;
             var timeDelta = now - lastMove;
 
             var factorDelta = (1 - pow(friction, timeDelta + 1)) / (1 - friction);
+            scrollNode.scrollLeft += speedX * factorDelta;
+            scrollNode.scrollTop += speedY * factorDelta;
+
             scroller._moveBy(speedX * factorDelta, speedY * factorDelta);
 
             var factorSpeed = pow(friction, timeDelta);
@@ -186,12 +209,8 @@ Scroll.prototype = {
             lastMove = now;
         }
 
-        var flickInterval = this._flickInterval = setInterval(flick, 16);
+        var flickInterval = this._flickInterval = setInterval(flick, 1000/60);
         //flick();
-    },
-
-    _endScroll: function _endScroll() {
-
     },
 
     _initDom: function initDom() {
@@ -221,11 +240,29 @@ Scroll.prototype = {
     }
 };
 
-//if (Scroll.prototype._hasHwAccel) {
-//    Scroll.prototype._transformToScroll = function _transformToScroll() {
+/**
+ * @private
+ * @static
+ * @type {boolean} Whether hardware acceleration is available.
+ */
+TouchScroll.prototype._hasHwAccel = TouchScroll.prototype._platform === "iOS"; //TODO: is there a better test?
+
+TouchScroll.prototype._isOldIosDevice = (function() {
+    if (TouchScroll.prototype._platform !== "iOS") { return false; }
+    var start = new Date().getTime();
+    var iterations = 0;
+    while (new Date().getTime() - start < 20) {
+        Math.random();
+        iterations++;
+    }
+    return iterations < 1000;
+}());
+
+//if (TouchScroll.prototype._hasHwAccel) {
+//    TouchScroll.prototype._transformToScroll = function _transformToScroll() {
 //    };
 //
-//    Scroll.prototype._moveBy = function _moveBy(x, y) {
+//    TouchScroll.prototype._moveBy = function _moveBy(x, y) {
 //        var style = this._domNode.style;
 //        var top = (this._translateY += y);
 //        var left = (this._translateX += x);
