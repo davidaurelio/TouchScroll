@@ -180,22 +180,23 @@ TouchScroll.prototype = {
     _flick: function _flick(speedX, speedY) {
         var node = this._domNode;
         var friction = this.flickFriction;
-        var scroller = this;
         var lastMove = new Date() - 0;
         var pow = Math.pow;
-        var scrollNode = this._domNode;
 
         function flick() {
             var now = new Date() - 0;
             var timeDelta = now - lastMove;
+            var powFrictionTimedelta = pow(friction, timeDelta);
 
-            var factorDelta = (1 - pow(friction, timeDelta + 1)) / (1 - friction);
-            scrollNode.scrollLeft += speedX * factorDelta;
-            scrollNode.scrollTop += speedY * factorDelta;
+            var factorDelta =
+                (1 - powFrictionTimedelta * friction /*pow(friction, timeDelta+1)*/) /
+                (1 - friction);
+            node.scrollLeft += speedX * factorDelta;
+            node.scrollTop += speedY * factorDelta;
 
-            scroller._moveBy(speedX * factorDelta, speedY * factorDelta);
+            //scroller._moveBy(speedX * factorDelta, speedY * factorDelta);
 
-            var factorSpeed = pow(friction, timeDelta);
+            var factorSpeed = powFrictionTimedelta /*pow(friction, timeDelta)*/;
             speedX *= factorSpeed;
             speedY *= factorSpeed;
 
