@@ -8,6 +8,38 @@ function TouchScroll(domNode, options) {
     this._initDom();
 }
 
+/**
+ * @private
+ * @static
+ * @type {CSSStyleSheet}
+ */
+TouchScroll._styleSheet = (function() {
+    var doc = document;
+    var parent = doc.querySelector("head") || doc.documentElement;
+    var styleNode = document.createElement("style");
+    parent.insertBefore(styleNode, parent.firstChild);
+
+    for (var i = 0, sheet; (sheet = doc.styleSheets[i]); i++) {
+        if (styleNode === sheet.ownerNode) {
+            return sheet; // return the newly created stylesheet
+        }
+    }
+
+    return doc.styleSheets[0]; // return a random stylesheet
+}());
+
+[
+    ".TouchScroll{}",
+    ".-ts-inner {" +
+        "position:relative;" +
+        "-webkit-transform-style:flat;" +
+    "}",
+    ".TouchScroll.scrolling>.-ts-inner{" +
+        "-webkit-user-select:none;" +
+        "pointer-events:none;" +
+    "}"
+].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
+
 TouchScroll.prototype = {
     /**
      * Configuration option: The friction factor (per ms) for flicks.
