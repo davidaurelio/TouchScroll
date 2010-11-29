@@ -64,6 +64,14 @@ TouchScroll.prototype = {
      */
     flickThreshold: 150,
 
+    /**
+     * Configuration option: The minimum amount of pixels travelled to trigger
+     * scrolling.
+     *
+     * @type {number}
+     */
+    scrollThreshold: 5,
+
     _flickInterval: null,
 
     /**
@@ -166,6 +174,19 @@ TouchScroll.prototype = {
         var deltaY = lastMove.deltaY = lastMove.pageY - pageY;
         var delta = lastMove.delta = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
 
+        if (!this._hasScrollStarted) {
+            var scrollThreshold = this.scrollThreshold;
+            var hasScrollStarted =
+                deltaY >= scrollThreshold || deltaY <= -scrollThreshold
+                deltaX >= scrollThreshold || deltaX <= -scrollThreshold;
+
+            if (hasScrollStarted) {
+            }
+            else {
+                return;
+            }
+        }
+
         var timeDelta = timeStamp - lastMove.timeStamp;
         lastMove.speedX = deltaX / timeDelta;
         lastMove.speedY = deltaY / timeDelta;
@@ -180,6 +201,10 @@ TouchScroll.prototype = {
 
     onRelease: function onRelease(event) {
         var lastMove = this._lastMove;
+        if (!this._hasScrollStarted || !lastMove) {
+            return;
+        }
+
         var timeDelta = event.timeStamp - lastMove.timeStamp;
 
         if (timeDelta <= this.flickThreshold && lastMove.speed >= this.flickMinSpeed) {
@@ -206,7 +231,9 @@ TouchScroll.prototype = {
     },
 
     _endScroll: function _endScroll() {
+        this._lastMove = null;
 
+        this._hasScrollStarted = false;
     },
 
     _flick: function _flick(speedX, speedY) {
@@ -241,6 +268,7 @@ TouchScroll.prototype = {
 
             if (0 === speedX && 0 === speedY) {
                 clearInterval(flickInterval);
+                this._endScroll();
             }
 
             lastMove = now;
