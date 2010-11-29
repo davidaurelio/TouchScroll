@@ -132,7 +132,11 @@ TouchScroll.prototype = {
     },
 
     onTouch: function onTouch(event) {
+        var node = this._domNode;
         //event.preventDefault();
+        clearInterval(this._flickInterval);
+        node.removeEventListener("click", this._cancelNextEvent, true);
+
         var touches = event.touches;
         var coords = touches && touches.length ? touches[0] : event;
 
@@ -155,7 +159,7 @@ TouchScroll.prototype = {
             // Simulate touch behaviour:
             // Touch events fire on the event a move started from.
             /** @type HTMLHtmlElement */
-            var root = this._domNode.ownerDocument.documentElement;
+            var root = node.ownerDocument.documentElement;
             root.addEventListener("mousemove", this, false);
             root.addEventListener("mouseup", this, false);
         }
@@ -219,6 +223,9 @@ TouchScroll.prototype = {
             this._endScroll();
         }
 
+        // prevent next click
+        this._domNode.addEventListener("click", this._cancelNextEvent, true);
+
         if (!this._hasTouchEvents) {
             // Simulate touch behaviour:
             // Touch events fire on the event a move started from.
@@ -235,15 +242,19 @@ TouchScroll.prototype = {
 
     _beginScroll: function() {
         this._hasScrollStarted = true;
-        this._domNode.className += " scrolling";
     },
 
     _endScroll: function _endScroll() {
         this._lastMove = null;
-
         this._hasScrollStarted = false;
-        var node = this._domNode;
-        node.className = node.className.replace(/ scrolling/g, "");
+    },
+
+    _cancelNextEvent: function _cancelNextEvent(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.removeEventListener(event.type, _cancelNextEvent, true);
+
+        return false;
     },
 
     _flick: function _flick(speedX, speedY) {
