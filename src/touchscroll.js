@@ -183,6 +183,10 @@ TouchScroll.prototype = {
         var lastMove = new Date() - 0;
         var pow = Math.pow;
 
+        // Keep internal scroll position, because node.scrollLeft/Top get rounded.
+        var scrollLeft = node.scrollLeft;
+        var scrollTop = node.scrollTop;
+
         function flick() {
             var now = new Date() - 0;
             var timeDelta = now - lastMove;
@@ -191,8 +195,8 @@ TouchScroll.prototype = {
             var factorDelta =
                 (1 - powFrictionTimedelta * friction /*pow(friction, timeDelta+1)*/) /
                 (1 - friction);
-            node.scrollLeft += speedX * factorDelta;
-            node.scrollTop += speedY * factorDelta;
+            node.scrollLeft = scrollLeft += speedX * factorDelta;
+            node.scrollTop = scrollTop += speedY * factorDelta;
 
             //scroller._moveBy(speedX * factorDelta, speedY * factorDelta);
 
