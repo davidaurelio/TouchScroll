@@ -115,6 +115,8 @@ TouchScroll.prototype = {
 
     _lastMove: null,
 
+    _scrollerTemplate: '<div class="-ts-inner"></div>',
+
     handleEvent: function(event) {
         var type = event.type;
         if ("touchmove" === type || "mousemove" === type) {
@@ -181,6 +183,7 @@ TouchScroll.prototype = {
                 deltaX >= scrollThreshold || deltaX <= -scrollThreshold;
 
             if (hasScrollStarted) {
+                this._beginScroll();
             }
             else {
                 return;
@@ -230,10 +233,17 @@ TouchScroll.prototype = {
 
     },
 
+    _beginScroll: function() {
+        this._hasScrollStarted = true;
+        this._domNode.className += " scrolling";
+    },
+
     _endScroll: function _endScroll() {
         this._lastMove = null;
 
         this._hasScrollStarted = false;
+        var node = this._domNode;
+        node.className = node.className.replace(/ scrolling/g, "");
     },
 
     _flick: function _flick(speedX, speedY) {
@@ -280,6 +290,16 @@ TouchScroll.prototype = {
 
     _initDom: function initDom() {
         var node = this._domNode;
+        node.className += " TouchScroll";
+
+        var children = node.ownerDocument.createDocumentFragment();
+        while ((firstChild = node.firstChild)) {
+            children.appendChild(firstChild);
+        }
+
+        node.innerHTML = this._scrollerTemplate;
+        var nodeInner = this._domNodeInner = node.querySelector(".-ts-inner");
+        nodeInner.appendChild(children);
 
         if (this._hasTouchEvents) {
             node.addEventListener("touchstart", this, false);
