@@ -54,7 +54,7 @@ TouchScroll.prototype = {
      *
      * @type {number}
      */
-    flickMinSpeed: 0.5,
+    flickMinSpeed: 0.3,
 
     /**
      * Configuration option: The maximum time delta (in ms) between last move
@@ -62,7 +62,7 @@ TouchScroll.prototype = {
      *
      * @type {number}
      */
-    flickThreshold: 150,
+    flickThreshold: 200,
 
     /**
      * Configuration option: The minimum amount of pixels travelled to trigger
