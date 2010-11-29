@@ -714,7 +714,7 @@ TouchScroll.prototype = {
             this._flick(duration, scrollMatrix);
         }
         else {
-            this._scrollBy(scrollMatrix);
+            this._scrollBy(scrollMatrix, true);
         }
     },
 
@@ -1094,7 +1094,7 @@ TouchScroll.prototype = {
             <=> d = s * (sum of f^n for n between 0 and t)
 
             which is a geometric series and thus can be simplified to:
-                d = s *  (1 - f^(d+1)) / (1 - f)
+                d = s * (1 - f^(t+1)) / (1 - f)
         */
         var factor = (1 - Math.pow(friction, duration + 1)) / (1 - friction);
         var distance = initialSpeed * factor;
@@ -1551,12 +1551,12 @@ TouchScroll.prototype = {
      *
      * @param {CSSMatrix} matrix Holds the offsets to apply.
      */
-    _scrollBy: function _scrollBy(matrix) {
+    _scrollBy: function _scrollBy(matrix, _force) {
         var isScrolling = this._isScrolling;
-        if (!isScrolling.e) {
+        if (!isScrolling.e && !_force) {
             matrix.e = 0;
         }
-        if (!isScrolling.f) {
+        if (!isScrolling.f && !_force) {
             matrix.f = 0;
         }
 
