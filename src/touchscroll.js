@@ -90,7 +90,7 @@ TouchScroll.prototype = {
     },
 
     onTouch: function onTouch(event) {
-        event.preventDefault();
+        //event.preventDefault();
         var touches = event.touches;
         var coords = touches && touches.length ? touches[0] : event;
 
