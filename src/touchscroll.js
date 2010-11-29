@@ -1,4 +1,7 @@
 function TouchScroll(domNode, options) {
+    /**
+     * @type {HTMLElement}
+     */
     this._domNode = domNode;
     this.elastic = this._hasHwAccel && false;
 
@@ -29,14 +32,11 @@ TouchScroll._styleSheet = (function() {
 }());
 
 [
-    ".TouchScroll{}",
-    ".-ts-inner {" +
-        "position:relative;" +
-        "-webkit-transform-style:flat;" +
+    ".TouchScroll{" +
+        "-webkit-tap-highlight-color:transparent;" +
     "}",
-    ".TouchScroll.scrolling>.-ts-inner{" +
-        "-webkit-user-select:none;" +
-        "pointer-events:none;" +
+    ".-ts-inner{" +
+        "height:100%;" +
     "}"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
