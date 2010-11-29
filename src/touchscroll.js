@@ -241,24 +241,6 @@ TouchScroll.prototype = {
     }
 };
 
-/**
- * @private
- * @static
- * @type {boolean} Whether hardware acceleration is available.
- */
-TouchScroll.prototype._hasHwAccel = TouchScroll.prototype._platform === "iOS"; //TODO: is there a better test?
-
-TouchScroll.prototype._isOldIosDevice = (function() {
-    if (TouchScroll.prototype._platform !== "iOS") { return false; }
-    var start = new Date().getTime();
-    var iterations = 0;
-    while (new Date().getTime() - start < 20) {
-        Math.random();
-        iterations++;
-    }
-    return iterations < 1000;
-}());
-
 //if (TouchScroll.prototype._hasHwAccel) {
 //    TouchScroll.prototype._transformToScroll = function _transformToScroll() {
 //    };
