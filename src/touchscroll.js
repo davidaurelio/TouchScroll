@@ -251,6 +251,7 @@ TouchScroll.prototype = {
         var friction = this.flickFriction;
         var lastMove = new Date() - 0;
         var pow = Math.pow;
+        var scroller = this;
 
         // Keep internal scroll position, because node.scrollLeft/Top get rounded.
         var scrollLeft = node.scrollLeft;
@@ -278,7 +279,7 @@ TouchScroll.prototype = {
 
             if (0 === speedX && 0 === speedY) {
                 clearInterval(flickInterval);
-                this._endScroll();
+                scroller._endScroll();
             }
 
             lastMove = now;
