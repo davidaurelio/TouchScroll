@@ -1,14 +1,38 @@
 function TouchScroll(domNode, options) {
+    options = options || {};
+
+    /** @type {Boolean} Whether the scroller bounces across its bounds. */
+    this.elastic = this._hasHwAccel && !!options.elastic && false; //TODO: implement
+
+    /** @type {Boolean} Whether to fire DOM scroll events */
+    this.scrollevents = !!options.scrollevents; //TODO: implement
+
+
+    var snapToGrid =
+        /** @type {Boolean} Whether to snap to a 100%x100%-grid -- "paging mode". */
+        this.snapToGrid = !!options.snapToGrid; //TODO: implement
+
+    /** @type {Object} Contains the number of segments for each axis (for paging mode). */
+    //this.maxSegments = {e: 1, f: 1};
+
+    /** @type {Object} Contains the current of segments for each axis (for paging mode). */
+    //this.currentSegment = {e: 0, f: 0};
+
+    /** @type {Boolean} Whether to build and use scrollbars. */
+    var useScrollIndicators = !snapToGrid;
+    if (!snapToGrid && "scrollbars" in options) {
+        useScrollIndicators = !!options.useScrollIndicators;
+    }
+
     /**
      * @type {HTMLElement}
      */
     this._domNode = domNode;
-    this.elastic = this._hasHwAccel && false;
 
     this._translateX = 0;
     this._translateY = 0;
 
-    this._initDom();
+    this._initDom(useScrollIndicators);
 }
 
 /**
@@ -116,6 +140,9 @@ TouchScroll.prototype = {
     _lastMove: null,
 
     _scrollerTemplate: '<div class="-ts-inner"></div>',
+    _scrollIndicatorTemplate:
+        '<div class="-ts-indicator -ts-indicator-x"><img><img><img></div>' +
+        '<div class="-ts-indicator -ts-indicator-y"><img><img><img></div>',
 
     handleEvent: function(event) {
         var type = event.type;
@@ -300,7 +327,14 @@ TouchScroll.prototype = {
         //flick();
     },
 
-    _initDom: function initDom() {
+    /**
+     * Initializes the DOM of the scroller:
+     *
+     * Wraps the contents in a div element and optionally adds scroll indicators.
+     *
+     * @param {boolean} useScrollIndicators Whether to add DOM for scroll indicators.
+     */
+    _initDom: function initDom(useScrollIndicators) {
         var node = this._domNode;
         node.className += " TouchScroll";
 
@@ -309,7 +343,8 @@ TouchScroll.prototype = {
             children.appendChild(firstChild);
         }
 
-        node.innerHTML = this._scrollerTemplate;
+        node.innerHTML = this._scrollerTemplate +
+            (useScrollIndicators ? this._scrollbarTemplate : "");
         var nodeInner = this._domNodeInner = node.querySelector(".-ts-inner");
         nodeInner.appendChild(children);
 
