@@ -2,15 +2,28 @@ function TouchScroll(domNode, options) {
     options = options || {};
 
     /** @type {Boolean} Whether the scroller bounces across its bounds. */
-    this.elastic = this._hasHwAccel && !!options.elastic && false; //TODO: implement
+    this.elastic =
+        //false &&
+        true ||
+        this._hasHwAccel && !!options.elastic; //TODO: implement
 
     /** @type {Boolean} Whether to fire DOM scroll events */
     this.scrollevents = !!options.scrollevents; //TODO: implement
 
+    /**
+     * @type {boolean} Whether to use transforms for scrolling (rather than scroll offset).
+     */
+    this._useTransforms =
+        false &&
+        //true ||
+        options.useTransforms !== false &&
+        this._hasTransforms &&
+        (options.useTransforms === true || this._hasHwAccel && this._performance > 1000);
 
     var snapToGrid =
         /** @type {Boolean} Whether to snap to a 100%x100%-grid -- "paging mode". */
         this.snapToGrid = !!options.snapToGrid; //TODO: implement
+
 
     /** @type {Object} Contains the number of segments for each axis (for paging mode). */
     //this.maxSegments = {e: 1, f: 1};
@@ -29,8 +42,27 @@ function TouchScroll(domNode, options) {
      */
     this._domNode = domNode;
 
+    /**
+     * @type {HTMLElement}
+     */
+    this._scrollNode = null;
+
+    this._offsetX = domNode.scrollLeft
+    this._offsetY = domNode.scrollTop;
     this._translateX = 0;
     this._translateY = 0;
+    this._scrollsX = false;
+    this._scrollsY = false;
+
+    this._width = 0;
+    this._height = 0;
+    this._scrollWidth = 0;
+    this._scrollHeight = 0;
+    this._maxX = 0;
+    this._maxY = 0;
+
+    this._currentMove = null;
+    this._lastMove = null;
 
     this._initDom(useScrollIndicators);
 }
@@ -58,9 +90,21 @@ TouchScroll._styleSheet = (function() {
 [
     ".TouchScroll{" +
         "-webkit-tap-highlight-color:transparent;" +
+        "overflow:hidden!important;" +
+        "position:relative;" +
     "}",
-    ".-ts-inner{" +
-        "height:100%;" +
+    ".-ts-scroller{" +
+        "overflow:hidden;" +
+        "position:absolute;" +
+        "top:0;right:0;bottom:0;left:0;" +
+    "}",
+    ".-ts-transform{"+
+        "overflow:visible;" +
+        "-webkit-transform:translate3d(0,0,0);" +
+        //"-webkit-transition:-webkit-transform 0 linear;" +
+    "}",
+    ".-ts-scrolling{"+
+        "-webkit-user-select:none;" +
     "}"
 ].forEach(function(rule, i) { this.insertRule(rule, i); }, TouchScroll._styleSheet);
 
@@ -81,6 +125,15 @@ TouchScroll.prototype = {
     flickMinSpeed: 0.3,
 
     /**
+     * Configuration option: The minimum speed (in px/ms) for ongoing flicks.
+     *
+     * All flicks with lower speed will be stopped.
+     *
+     * @type {Number}
+     */
+    flickStopSpeed: 0.05,
+
+    /**
      * Configuration option: The maximum time delta (in ms) between last move
      * and release event to trigger a flick.
      *
@@ -94,31 +147,35 @@ TouchScroll.prototype = {
      *
      * @type {number}
      */
-    scrollThreshold: 5,
+    minScroll: 3,
+
+    /**
+     * Configuration option: Snap back duration (in ms).
+     *
+     * @type {Number}
+     */
+    snapBackDuration: 400,
+
+    _android: (function() {
+        var match = navigator.userAgent.match(/Android\s+(\d+(?:\.\d+)?)/);
+        return match && parseFloat(match[1]);
+    }()),
 
     _flickInterval: null,
 
     /**
      * @private
      * @static
-     * @type {boolean} Whether we are dealing with a performant device.
+     * @type {boolean} Whether hardware acceleration is available.
      */
-    _isPerformantDevice: (function() {
-        var start = new Date().getTime();
-        var iterations = 0;
-        while (new Date().getTime() - start < 20) {
-            Math.random();
-            iterations++;
-        }
-        return iterations > 1000;
-    }()),
+    _hasHwAccel: false && /^i(?:Phone|Pod|Pad)/.test(navigator.platform), //TODO: better test
 
     /**
      * @private
      * @static
-     * @type {boolean} Whether hardware acceleration is available.
+     * @type {boolean} Whether webkit transformations are available.
      */
-    _hasHwAccel: /^i(?:Phone|Pod|Pad)/.test(navigator.platform), //TODO: better test
+    _hasTransforms: this.hasOwnProperty("WebKitCSSMatrix"),
 
     /**
      * @private
@@ -137,9 +194,36 @@ TouchScroll.prototype = {
         }
     }()),
 
+    _parsesMatrixCorrectly: (function() {
+        if (!this.hasOwnProperty("WebKitCSSMatrix")) {
+            return false;
+        }
+
+        var m = new WebKitCSSMatrix("matrix(1, 0, 0, 1, -20, -30)");
+        return m.e === -20 && m.f === -30;
+    }()),
+
     _lastMove: null,
 
-    _scrollerTemplate: '<div class="-ts-inner"></div>',
+    /**
+     * A performance index. Can be used to distinguish between weak and strong devices.
+     *
+     * @private
+     * @static
+     * @type {Number}
+     */
+    _performance: (function() {
+        var start = new Date().getTime();
+        var iterations = 0;
+        while (new Date().getTime() - start < 20) {
+            Math.random();
+            iterations++;
+        }
+
+        return iterations;
+    }()),
+
+    _scrollerTemplate: '<div class="-ts-scroller"></div>',
     _scrollIndicatorTemplate:
         '<div class="-ts-indicator -ts-indicator-x"><img><img><img></div>' +
         '<div class="-ts-indicator -ts-indicator-y"><img><img><img></div>',
@@ -167,20 +251,9 @@ TouchScroll.prototype = {
         var touches = event.touches;
         var coords = touches && touches.length ? touches[0] : event;
 
-        this._lastMove = {
-            delta: 0,
-            deltaX: 0,
-            deltaY: 0,
-            /** @type {number} */
-            pageX: coords.pageX,
-            /** @type {number} */
-            pageY: coords.pageY,
-            /** @type {number} */
-            timeStamp: event.timeStamp,
-            speed: 0,
-            speedX: 0,
-            speedY: 0
-        };
+        this._lastMove = null;
+        this._currentMove = [event.timeStamp, coords.pageX, coords.pageY];
+        this._hasScrollStarted = false;
 
         if (!this._hasTouchEvents) {
             // Simulate touch behaviour:
@@ -202,16 +275,17 @@ TouchScroll.prototype = {
         var pageY = coords.pageY;
         var timeStamp = event.timeStamp;
 
-        var lastMove = this._lastMove;
-        var deltaX = lastMove.deltaX = lastMove.pageX - pageX;
-        var deltaY = lastMove.deltaY = lastMove.pageY - pageY;
-        var delta = lastMove.delta = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+        var lastMove = this._lastMove = this._currentMove;
+        var deltaX = this._scrollsX ? lastMove[1] - pageX : 0;
+        var deltaY = this._scrollsY ? lastMove[2] - pageY : 0;
+
+        this._currentMove = [timeStamp, pageX, pageY];
 
         if (!this._hasScrollStarted) {
-            var scrollThreshold = this.scrollThreshold;
+            var minScroll = this.minScroll;
             var hasScrollStarted =
-                deltaY >= scrollThreshold || deltaY <= -scrollThreshold
-                deltaX >= scrollThreshold || deltaX <= -scrollThreshold;
+                deltaY >= minScroll || deltaY <= -minScroll ||
+                deltaX >= minScroll || deltaX <= -minScroll;
 
             if (hasScrollStarted) {
                 this._beginScroll();
@@ -221,29 +295,24 @@ TouchScroll.prototype = {
             }
         }
 
-        var timeDelta = timeStamp - lastMove.timeStamp;
-        lastMove.speedX = deltaX / timeDelta;
-        lastMove.speedY = deltaY / timeDelta;
-        lastMove.speed = delta / timeDelta;
-
-        lastMove.pageX = pageX;
-        lastMove.pageY = pageY;
-        lastMove.timeStamp = timeStamp;
-
         this._moveBy(deltaX, deltaY);
     },
 
     onRelease: function onRelease(event) {
-        var lastMove = this._lastMove;
+        var lastMove = this._lastMove, currentMove = this._currentMove;
         if (!this._hasScrollStarted || !lastMove) {
             return;
         }
 
-        var timeDelta = event.timeStamp - lastMove.timeStamp;
+        var timeDeltaRelease = event.timeStamp - lastMove[0];
+        var timeDeltaDrag = currentMove[0] - lastMove[0];
+        var speedX = (lastMove[1] - currentMove[1]) / timeDeltaDrag;
+        var speedY = (lastMove[2] - currentMove[2]) / timeDeltaDrag;
+        var speed = Math.sqrt(speedX*speedX + speedY*speedY);
 
-        if (timeDelta <= this.flickThreshold && lastMove.speed >= this.flickMinSpeed) {
+        if (timeDeltaRelease <= this.flickThreshold && speed >= this.flickMinSpeed) {
             // flick animation
-            this._flick(lastMove.speedX, lastMove.speedY);
+            this._flick(speedX, speedY);
         }
         else {
             // no flick
@@ -264,16 +333,40 @@ TouchScroll.prototype = {
     },
 
     setupScroller: function setupScroller() {
+        var scrollNode = this._scrollNode;
 
+        var width = scrollNode.offsetWidth;
+        var height = scrollNode.offsetHeight;
+        var scrollWidth = scrollNode.scrollWidth;
+        var scrollHeight = scrollNode.scrollHeight;
+        var maxX = scrollWidth - width;
+        var maxY = scrollHeight - height;
+
+        this._scrollsX = scrollWidth > width;
+        this._scrollsY = scrollHeight > height || this.elastic;
+
+        this._width = width;
+        this._height = height;
+        this._scrollWidth = scrollWidth;
+        this._scrollHeight = scrollHeight;
+        this._maxX = maxX;
+        this._maxY = maxY;
     },
 
     _beginScroll: function() {
         this._hasScrollStarted = true;
+        this._scrollNode.className += " -ts-scrolling";
     },
 
     _endScroll: function _endScroll() {
-        this._lastMove = null;
-        this._hasScrollStarted = false;
+        if (this._snapBack()) { return; }
+
+        clearInterval(this._flickInterval);
+        var scrollNode = this._scrollNode;
+        scrollNode.className = scrollNode.className.replace(/ -ts-scrolling/g, "");
+        //if (this._useTransforms) {
+        //    scrollNode.style.webkitTransitionDuration = "";
+        //}
     },
 
     _cancelNextEvent: function _cancelNextEvent(event) {
@@ -285,45 +378,97 @@ TouchScroll.prototype = {
     },
 
     _flick: function _flick(speedX, speedY) {
-        var node = this._domNode;
-        var friction = this.flickFriction;
-        var lastMove = new Date() - 0;
-        var pow = Math.pow;
+        console.log(speedX, speedY);
         var scroller = this;
 
-        // Keep internal scroll position, because node.scrollLeft/Top get rounded.
-        var scrollLeft = node.scrollLeft;
-        var scrollTop = node.scrollTop;
+        var frictionX = this.flickFriction;
+        var frictionY = frictionX;
+
+        var stopSpeed = this.flickStopSpeed;
+        var lastMove = new Date() - 0;
+        var start = lastMove;
+        var pow = Math.pow;
+
+        if (!this._scrollsX) { speedX = 0; }
+        if (!this._scrollsY) { speedY = 0; }
+
+        var maxX = this._maxX;
+        var maxY = this._maxY;
+        var offsetX = this._offsetX;
+        var offsetY = this._offsetY;
+        var isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
+        var isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
+        var wasOutOfBoundsX = false, wasOutOfBoundsY = false;
+        var snappingBackX = false;
+        var snappingBackY = false;
+        var snapBackDuration = this.snapBackDuration;
+
+        var delay = /*this._useTransforms ? 25 : */1000/60;
+
+        //if (useTransforms) {
+        //    scrollNode.style.webkitTransitionDuration = "10ms";
+        //}
 
         function flick() {
             var now = new Date() - 0;
             var timeDelta = now - lastMove;
-            var powFrictionTimedelta = pow(friction, timeDelta);
 
-            var factorDelta =
-                (1 - powFrictionTimedelta * friction /*pow(friction, timeDelta+1)*/) /
-                (1 - friction);
-            node.scrollLeft = scrollLeft += speedX * factorDelta;
-            node.scrollTop = scrollTop += speedY * factorDelta;
+            if (isOutOfBoundsX && !wasOutOfBoundsX) {
+                frictionX *= frictionX; //TODO: prevent long bounces
+                wasOutOfBoundsX = true;
+            }
+            if (isOutOfBoundsY && !wasOutOfBoundsY) {
+                frictionY *= frictionY;
+                wasOutOfBoundsX = true;
+            }
 
-            //scroller._moveBy(speedX * factorDelta, speedY * factorDelta);
+            var factorX = pow(frictionX, timeDelta);
+            var factorY = pow(frictionY, timeDelta);
 
-            var factorSpeed = powFrictionTimedelta /*pow(friction, timeDelta)*/;
-            speedX *= factorSpeed;
-            speedY *= factorSpeed;
+            var factorDeltaX = (1 - factorX * frictionX) / (1 - frictionX); // geometric series
+            var factorDeltaY = (1 - factorY * frictionY) / (1 - frictionY);
 
-            if (0 !== speedX && speedX < 0.1 && speedX > -0.1) { speedX = 0; }
-            if (0 !== speedY && speedY < 0.1 && speedY > -0.1) { speedY = 0; }
+            var deltaX = speedX * factorDeltaX;
+            var deltaY = speedY * factorDeltaY;
+
+            var move = scroller._moveBy(deltaX, deltaY);
+            offsetX = move[0];
+            offsetY = move[1];
+            isOutOfBoundsX = move[4];
+            isOutOfBoundsY = move[5];
+
+            speedX *= factorX;
+            speedY *= factorY;
+
+            if (0 !== speedX && speedX < stopSpeed && speedX > -stopSpeed) { speedX = 0; }
+            if (0 !== speedY && speedY < stopSpeed && speedY > -stopSpeed) { speedY = 0; }
+
+            //TODO correct speed computation
+            if (0 === speedX && isOutOfBoundsX) {
+                var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
+                speedX = -distanceX /
+                    ((1 - pow(frictionX, snapBackDuration+1)) / (1 - frictionX));
+            }
+            if (0 === speedY && isOutOfBoundsY) {
+                var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
+                speedY = -distanceY /
+                    ((1 - pow(frictionY, snapBackDuration+1)) / (1 - frictionY));
+            }
 
             if (0 === speedX && 0 === speedY) {
-                clearInterval(flickInterval);
+                //clearTimeout(flickInterval);
+                console.log(now - start);
+                scroller._forceIntoBounds();
                 scroller._endScroll();
             }
 
             lastMove = now;
         }
 
-        var flickInterval = this._flickInterval = setInterval(flick, 1000/60);
+        var flickInterval = this._flickInterval = setInterval(flick, delay);
+        //setTimeout(function() {
+        //    this._domNode.removeEventListener("click", scroller._cancelNextEvent, true);
+        //}, 0);
         //flick();
     },
 
@@ -343,10 +488,13 @@ TouchScroll.prototype = {
             children.appendChild(firstChild);
         }
 
-        node.innerHTML = this._scrollerTemplate +
-            (useScrollIndicators ? this._scrollbarTemplate : "");
-        var nodeInner = this._domNodeInner = node.querySelector(".-ts-inner");
-        nodeInner.appendChild(children);
+        var html = this._scrollerTemplate;
+        if (useScrollIndicators) { html += this._scrollIndicatorTemplate; }
+
+        node.innerHTML = html;
+        var scrollNode = this._scrollNode = node.querySelector(".-ts-scroller");
+        if (this._useTransforms) { scrollNode.className += " -ts-transform"; }
+        scrollNode.appendChild(children);
 
         if (this._hasTouchEvents) {
             node.addEventListener("touchstart", this, false);
@@ -357,18 +505,123 @@ TouchScroll.prototype = {
         else {
             node.addEventListener("mousedown", this, false);
         }
+
+        this.setupScroller();
     },
 
-    _moveBy: function _moveBy(x, y) {
-        var node = this._domNode;
-        var top = (node.scrollTop += y);
-        var left = (node.scrollLeft += x);
-        return [top, left];
+    _forceIntoBounds: function _forceIntoBounds() {
+        var offsetX = this._offsetX;
+        var offsetY = this._offsetY;
+        var maxX = this._maxX;
+        var maxY = this._maxY;
+        var scrollNode = this._scrollNode
+
+        this._offsetX = offsetX =
+            offsetX < 0 ? 0 : (offsetX > maxX ? maxX : offsetX + .5 | 0);
+        this._offsetY = offsetY =
+            offsetY < 0 ? 0 : (offsetY > maxY ? maxY : offsetY + .5 | 0);
+
+        if (this._useTransforms) {
+            this._scrollNode.style.webkitTransform =
+                "translate3d(" + offsetX + "px," + offsetY + "px,0)";
+        }
+        else {
+            var s = scrollNode.style;
+            s.webkitTransform = s.margin = "";
+            scrollNode.scrollLeft = offsetX;
+            scrollNode.scrollTop = offsetY;
+        }
     },
 
-    _setOffset: function _setOffset(style, x, y) {
-        style.left = x + "px";
-        style.top = y + "px";
+    _moveBy: function _moveBy(deltaX, deltaY) {
+        var scrollNode = this._scrollNode;
+        var offsetX = this._offsetX;
+        var offsetY = this._offsetY;
+        var maxX = this._maxX;
+        var maxY = this._maxY;
+        var isElastic = this.elastic;
+        var wasOutOfBoundsX = offsetX < 0 || offsetX > maxX;
+        var wasOutOfBoundsY = offsetY < 0 || offsetY > maxY;
+        var isOutOfBoundsX =
+            deltaX > 0 && offsetX >= maxX ||
+            deltaX < 0 && offsetX <= 0 ||
+            deltaX === 0 && wasOutOfBoundsX;
+        var isOutOfBoundsY =
+            deltaY > 0 && offsetY >= maxY ||
+            deltaY < 0 && offsetY <= 0 ||
+            deltaY === 0 && wasOutOfBoundsY;
+
+        if (isOutOfBoundsX) {
+            if (isElastic) { deltaX /= 2; }
+            else { deltaX = 0; }
+        }
+        if (isOutOfBoundsY) {
+            if (isElastic) { deltaY /= 2; }
+            else { deltaY = 0; }
+        }
+
+        offsetX = (this._offsetX += deltaX);
+        offsetY = (this._offsetY += deltaY);
+
+        if (this._useTransforms) {
+            scrollNode.style.webkitTransform =
+                "translate3d(" + -offsetX + "px," + -offsetY + "px,0)";
+        }
+        else {
+            // auto-rounding, auto-constraining to bounds
+            scrollNode.scrollLeft = offsetX;
+            scrollNode.scrollTop = offsetY;
+            var bounceX = 0, bounceY = 0;
+
+            if (isOutOfBoundsX && isElastic) {
+                bounceX = deltaX < 0 ? offsetX : offsetX - maxX;
+            }
+            if (isOutOfBoundsY && isElastic) {
+                bounceY = deltaY < 0 ? offsetY : offsetY - maxY;
+            }
+
+            if (isOutOfBoundsY || wasOutOfBoundsY || isOutOfBoundsX || wasOutOfBoundsX) {
+                if (this._hasTransforms) {
+                    scrollNode.style.webkitTransform = bounceY || bounceX ?
+                        "translate3d(" + -bounceX + "px," + -bounceY + "px,0)" : "";
+                }
+                else {
+                    scrollNode.style.margin = bounceY || bounceX ?
+                        -bounceY + "px 0 0 " + -bounceX + "px" : "";
+                }
+            }
+        }
+
+        return [offsetX, offsetY, deltaX, deltaY, isOutOfBoundsX, isOutOfBoundsY];
+    },
+
+    /**
+     * Forces the scroller back into the bounds, using an animation.
+     *
+     * @returns {boolean} Whether a snapback animation has been started.
+     */
+    _snapBack: function() {
+        var offsetX = this._offsetX;
+        var offsetY = this._offsetY;
+        var maxX = this._maxX;
+        var maxY = this._maxY;
+        alert("snapback")
+
+        var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
+        var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
+
+        if (distanceX || distanceY) { // TODO correct speed computation
+            var f = this.flickFriction;
+            f *= f;
+            var t = this.snapBackDuration;
+            var q = Math.pow(f, t+1) - 1;
+
+            this._flick(-distanceX * (f - 1) / q, // speedX
+                        -distanceY * (f - 1) / q); // speedY
+            return true;
+        }
+
+        return false;
     }
 };
 
