@@ -5,7 +5,7 @@ function TouchScroll(domNode, options) {
     this.elastic =
         //false &&
         true ||
-        this._hasHwAccel && !!options.elastic; //TODO: implement
+        this._hasTransforms && this._hasHwAccel && options.elastic; //TODO: implement
 
     /** @type {Boolean} Whether to fire DOM scroll events */
     this.scrollevents = !!options.scrollevents; //TODO: implement
@@ -527,7 +527,7 @@ TouchScroll.prototype = {
         }
         else {
             var s = scrollNode.style;
-            s.webkitTransform = s.margin = "";
+            s.webkitTransform = "";
             scrollNode.scrollLeft = offsetX;
             scrollNode.scrollTop = offsetY;
         }
@@ -581,14 +581,8 @@ TouchScroll.prototype = {
             }
 
             if (isOutOfBoundsY || wasOutOfBoundsY || isOutOfBoundsX || wasOutOfBoundsX) {
-                if (this._hasTransforms) {
-                    scrollNode.style.webkitTransform = bounceY || bounceX ?
-                        "translate3d(" + -bounceX + "px," + -bounceY + "px,0)" : "";
-                }
-                else {
-                    scrollNode.style.margin = bounceY || bounceX ?
-                        -bounceY + "px 0 0 " + -bounceX + "px" : "";
-                }
+                scrollNode.style.webkitTransform = bounceY || bounceX ?
+                    "translate3d(" + -bounceX + "px," + -bounceY + "px,0)" : "";
             }
         }
 
