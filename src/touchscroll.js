@@ -2,10 +2,13 @@ function TouchScroll(domNode, options) {
     options = options || {};
 
     /** @type {Boolean} Whether the scroller bounces across its bounds. */
-    this.elastic =
+    this.elastic = //TODO: implement
         //false &&
         true ||
-        this._hasTransforms && this._hasHwAccel && options.elastic; //TODO: implement
+        this._hasTransforms &&
+        this._hasTransitions &&
+        this._hasHwAccel &&
+        options.elastic;
 
     /** @type {Boolean} Whether to fire DOM scroll events */
     this.scrollevents = !!options.scrollevents; //TODO: implement
@@ -175,7 +178,14 @@ TouchScroll.prototype = {
      * @static
      * @type {boolean} Whether webkit transformations are available.
      */
-    _hasTransforms: this.hasOwnProperty("WebKitCSSMatrix"),
+    _hasTransforms: "WebKitCSSMatrix" in this,
+
+    /**
+     * @private
+     * @static
+     * @type {boolean} Whether webkit transitions are available
+     */
+    _hasTransitions: "WebKitTransitionEvent" in this,
 
     /**
      * @private
@@ -195,7 +205,7 @@ TouchScroll.prototype = {
     }()),
 
     _parsesMatrixCorrectly: (function() {
-        if (!this.hasOwnProperty("WebKitCSSMatrix")) {
+        if (!("WebKitCSSMatrix" in this)) {
             return false;
         }
 
@@ -378,7 +388,6 @@ TouchScroll.prototype = {
     },
 
     _flick: function _flick(speedX, speedY) {
-        console.log(speedX, speedY);
         var scroller = this;
 
         var frictionX = this.flickFriction;
@@ -386,7 +395,6 @@ TouchScroll.prototype = {
 
         var stopSpeed = this.flickStopSpeed;
         var lastMove = new Date() - 0;
-        var start = lastMove;
         var pow = Math.pow;
 
         if (!this._scrollsX) { speedX = 0; }
@@ -457,7 +465,6 @@ TouchScroll.prototype = {
 
             if (0 === speedX && 0 === speedY) {
                 //clearTimeout(flickInterval);
-                console.log(now - start);
                 scroller._forceIntoBounds();
                 scroller._endScroll();
             }
@@ -599,7 +606,6 @@ TouchScroll.prototype = {
         var offsetY = this._offsetY;
         var maxX = this._maxX;
         var maxY = this._maxY;
-        alert("snapback")
 
         var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
         var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
