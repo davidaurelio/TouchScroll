@@ -100,10 +100,10 @@ TouchScroll._styleSheet = (function() {
         "overflow:hidden;" +
         "position:absolute;" +
         "top:0;right:0;bottom:0;left:0;" +
+        //"-webkit-transform:translate3d(0,0,0);" +
     "}",
     ".-ts-transform{"+
         "overflow:visible;" +
-        "-webkit-transform:translate3d(0,0,0);" +
         //"-webkit-transition:-webkit-transform 0 linear;" +
     "}",
     ".-ts-scrolling{"+
@@ -305,6 +305,23 @@ TouchScroll.prototype = {
             }
         }
 
+        var offsetX = this._offsetX;
+        var offsetY = this._offsetY;
+        var maxX = this._maxX;
+        var maxY = this._maxY;
+        var isElastic = this.elastic;
+        var isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
+        var isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
+
+        if (isOutOfBoundsX) {
+            if (isElastic) { deltaX /= 2; }
+            else { deltaX = 0; }
+        }
+        if (isOutOfBoundsY) {
+            if (isElastic) { deltaY /= 2; }
+            else { deltaY = 0; }
+        }
+
         this._moveBy(deltaX, deltaY);
     },
 
@@ -369,9 +386,9 @@ TouchScroll.prototype = {
     },
 
     _endScroll: function _endScroll() {
-        if (this._snapBack()) { return; }
-
         clearInterval(this._flickInterval);
+        //if (this._snapBack()) { return; }
+
         var scrollNode = this._scrollNode;
         scrollNode.className = scrollNode.className.replace(/ -ts-scrolling/g, "");
         //if (this._useTransforms) {
@@ -387,12 +404,10 @@ TouchScroll.prototype = {
         return false;
     },
 
-    _flick: function _flick(speedX, speedY) {
+    _flick: function _flick(speedX, speedY, forceStop) {
         var scroller = this;
 
-        var frictionX = this.flickFriction;
-        var frictionY = frictionX;
-
+        var friction = this.flickFriction;
         var stopSpeed = this.flickStopSpeed;
         var lastMove = new Date() - 0;
         var pow = Math.pow;
@@ -404,67 +419,54 @@ TouchScroll.prototype = {
         var maxY = this._maxY;
         var offsetX = this._offsetX;
         var offsetY = this._offsetY;
-        var isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
-        var isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
-        var wasOutOfBoundsX = false, wasOutOfBoundsY = false;
-        var snappingBackX = false;
-        var snappingBackY = false;
-        var snapBackDuration = this.snapBackDuration;
+        var isOutOfBoundsX, isOutOfBoundsY;
 
-        var delay = /*this._useTransforms ? 25 : */1000/60;
+        var delay = /*this._useTransforms ? 25 : */1000/40;
 
         //if (useTransforms) {
         //    scrollNode.style.webkitTransitionDuration = "10ms";
         //}
+        var start = lastMove;
 
         function flick() {
             var now = new Date() - 0;
             var timeDelta = now - lastMove;
 
-            if (isOutOfBoundsX && !wasOutOfBoundsX) {
-                frictionX *= frictionX; //TODO: prevent long bounces
-                wasOutOfBoundsX = true;
-            }
-            if (isOutOfBoundsY && !wasOutOfBoundsY) {
-                frictionY *= frictionY;
-                wasOutOfBoundsX = true;
-            }
+            isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
+            isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
 
-            var factorX = pow(frictionX, timeDelta);
-            var factorY = pow(frictionY, timeDelta);
+            var factor = pow(friction, timeDelta);
+            speedX *= factor;
+            speedY *= factor;
 
-            var factorDeltaX = (1 - factorX * frictionX) / (1 - frictionX); // geometric series
-            var factorDeltaY = (1 - factorY * frictionY) / (1 - frictionY);
-
-            var deltaX = speedX * factorDeltaX;
-            var deltaY = speedY * factorDeltaY;
+            //d = s * (1 - f^(t+1)) / (1 - f)
+            //var factorDelta = (1 - factor * friction) / (1 - friction); // geometric series
+            var factorDelta = (1 - pow(friction, timeDelta+1)) / (1 - friction);
+            var deltaX = speedX * factorDelta;
+            var deltaY = speedY * factorDelta;
 
             var move = scroller._moveBy(deltaX, deltaY);
-            offsetX = move[0];
-            offsetY = move[1];
-            isOutOfBoundsX = move[4];
-            isOutOfBoundsY = move[5];
-
-            speedX *= factorX;
-            speedY *= factorY;
 
             if (0 !== speedX && speedX < stopSpeed && speedX > -stopSpeed) { speedX = 0; }
             if (0 !== speedY && speedY < stopSpeed && speedY > -stopSpeed) { speedY = 0; }
 
-            //TODO correct speed computation
-            if (0 === speedX && isOutOfBoundsX) {
-                var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
-                speedX = -distanceX /
-                    ((1 - pow(frictionX, snapBackDuration+1)) / (1 - frictionX));
-            }
-            if (0 === speedY && isOutOfBoundsY) {
-                var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
-                speedY = -distanceY /
-                    ((1 - pow(frictionY, snapBackDuration+1)) / (1 - frictionY));
-            }
+            ////TODO correct speed computation
+            //if (0 === speedX && isOutOfBoundsX) {
+            //    var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
+            //    speedX = -distanceX /
+            //        ((1 - pow(frictionX, snapBackDuration+1)) / (1 - frictionX));
+            //}
+            //if (0 === speedY && isOutOfBoundsY) {
+            //    var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
+            //    speedY = -distanceY /
+            //        ((1 - pow(frictionY, snapBackDuration+1)) / (1 - frictionY));
+            //}
 
-            if (0 === speedX && 0 === speedY) {
-                //clearTimeout(flickInterval);
+            if (0 === speedX && 0 === speedY || 0 === move[2] && 0 === move[3]) {
+                clearTimeout(flickInterval);
+                //if (forceStop || !scroller._snapBack()) {
+                //    console.log(now - start, move)
+                //}
                 scroller._forceIntoBounds();
                 scroller._endScroll();
             }
@@ -542,33 +544,8 @@ TouchScroll.prototype = {
 
     _moveBy: function _moveBy(deltaX, deltaY) {
         var scrollNode = this._scrollNode;
-        var offsetX = this._offsetX;
-        var offsetY = this._offsetY;
-        var maxX = this._maxX;
-        var maxY = this._maxY;
-        var isElastic = this.elastic;
-        var wasOutOfBoundsX = offsetX < 0 || offsetX > maxX;
-        var wasOutOfBoundsY = offsetY < 0 || offsetY > maxY;
-        var isOutOfBoundsX =
-            deltaX > 0 && offsetX >= maxX ||
-            deltaX < 0 && offsetX <= 0 ||
-            deltaX === 0 && wasOutOfBoundsX;
-        var isOutOfBoundsY =
-            deltaY > 0 && offsetY >= maxY ||
-            deltaY < 0 && offsetY <= 0 ||
-            deltaY === 0 && wasOutOfBoundsY;
-
-        if (isOutOfBoundsX) {
-            if (isElastic) { deltaX /= 2; }
-            else { deltaX = 0; }
-        }
-        if (isOutOfBoundsY) {
-            if (isElastic) { deltaY /= 2; }
-            else { deltaY = 0; }
-        }
-
-        offsetX = (this._offsetX += deltaX);
-        offsetY = (this._offsetY += deltaY);
+        var offsetX = (this._offsetX += deltaX);
+        var offsetY = (this._offsetY += deltaY);
 
         if (this._useTransforms) {
             scrollNode.style.webkitTransform =
@@ -578,22 +555,29 @@ TouchScroll.prototype = {
             // auto-rounding, auto-constraining to bounds
             scrollNode.scrollLeft = offsetX;
             scrollNode.scrollTop = offsetY;
+
+            var maxX = this._maxX;
+            var maxY = this._maxY;
             var bounceX = 0, bounceY = 0;
 
-            if (isOutOfBoundsX && isElastic) {
-                bounceX = deltaX < 0 ? offsetX : offsetX - maxX;
-            }
-            if (isOutOfBoundsY && isElastic) {
-                bounceY = deltaY < 0 ? offsetY : offsetY - maxY;
-            }
+            var isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
+            var isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
 
-            if (isOutOfBoundsY || wasOutOfBoundsY || isOutOfBoundsX || wasOutOfBoundsX) {
+            if (isOutOfBoundsX) {
+                bounceX = offsetX < 0 ? offsetX :
+                    (offsetX > maxX ? offsetX - maxX : 0);
+            }
+            if (isOutOfBoundsY) {
+                bounceY = offsetY < 0 ? offsetY :
+                    (offsetY > maxY ? offsetY - maxY : 0);
+            }
+            if (isOutOfBoundsY || isOutOfBoundsX) {
                 scrollNode.style.webkitTransform = bounceY || bounceX ?
                     "translate3d(" + -bounceX + "px," + -bounceY + "px,0)" : "";
             }
         }
 
-        return [offsetX, offsetY, deltaX, deltaY, isOutOfBoundsX, isOutOfBoundsY];
+        return [offsetX, offsetY, deltaX, deltaY];
     },
 
     /**
@@ -602,26 +586,26 @@ TouchScroll.prototype = {
      * @returns {boolean} Whether a snapback animation has been started.
      */
     _snapBack: function() {
-        var offsetX = this._offsetX;
-        var offsetY = this._offsetY;
-        var maxX = this._maxX;
-        var maxY = this._maxY;
-
-        var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
-        var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
-
-        if (distanceX || distanceY) { // TODO correct speed computation
-            var f = this.flickFriction;
-            f *= f;
-            var t = this.snapBackDuration;
-            var q = Math.pow(f, t+1) - 1;
-
-            this._flick(-distanceX * (f - 1) / q, // speedX
-                        -distanceY * (f - 1) / q); // speedY
-            return true;
-        }
-
-        return false;
+        //var offsetX = this._offsetX;
+        //var offsetY = this._offsetY;
+        //var maxX = this._maxX;
+        //var maxY = this._maxY;
+        //
+        //var distanceX = offsetX < 0 ? offsetX : (offsetX > maxX ? offsetX - maxX : 0);
+        //var distanceY = offsetY < 0 ? offsetY : (offsetY > maxY ? offsetY - maxY : 0);
+        //
+        //if (distanceX || distanceY) { // TODO correct speed computation
+        //    var f = this.flickFriction;
+        //    var t = this.snapBackDuration;
+        //    var q = Math.pow(f, t+1) - 1;
+        //
+        //    this._flick(-distanceX * (f - 1) / q, // speedX
+        //                -distanceY * (f - 1) / q, // speedY
+        //                true); // force stop
+        //    return true;
+        //}
+        //
+        //return false;
     }
 };
 
