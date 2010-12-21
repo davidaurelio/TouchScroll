@@ -407,7 +407,8 @@ TouchScroll.prototype = {
     _flick: function _flick(speedX, speedY, forceStop) {
         var scroller = this;
 
-        var friction = this.flickFriction;
+        var frictionX = this.flickFriction;
+        var frictionY = frictionX;
         var stopSpeed = this.flickStopSpeed;
         var lastMove = new Date() - 0;
         var pow = Math.pow;
@@ -420,13 +421,16 @@ TouchScroll.prototype = {
         var offsetX = this._offsetX;
         var offsetY = this._offsetY;
         var isOutOfBoundsX, isOutOfBoundsY;
+        var wasOutOfBoundsX = false;
+        var wasOutOfBoundsY = false;
 
-        var delay = /*this._useTransforms ? 25 : */1000/40;
+        var delay = /*this._useTransforms ? 25 : */1000/61;
 
         //if (useTransforms) {
         //    scrollNode.style.webkitTransitionDuration = "10ms";
         //}
         var start = lastMove;
+        var startSnapBack;
 
         function flick() {
             var now = new Date() - 0;
@@ -435,17 +439,30 @@ TouchScroll.prototype = {
             isOutOfBoundsX = offsetX < 0 || offsetX > maxX;
             isOutOfBoundsY = offsetY < 0 || offsetY > maxY;
 
-            var factor = pow(friction, timeDelta);
-            speedX *= factor;
-            speedY *= factor;
+            if (isOutOfBoundsX && !wasOutOfBoundsX) {
+                frictionX *= frictionX * frictionX * frictionX * frictionX; // pow(frictionX, 4)
+                wasOutOfBoundsX = isOutOfBoundsX;
+            }
+            if (isOutOfBoundsY && !wasOutOfBoundsY) {
+                frictionY *= frictionY * frictionY * frictionY * frictionY; // pow(frictionY, 4)
+                wasOutOfBoundsY = isOutOfBoundsY;
+            }
+
+            //var factor = pow(frictionY, timeDelta);
+            speedX *= pow(frictionX, timeDelta);
+            speedY *= pow(frictionY, timeDelta);
 
             //d = s * (1 - f^(t+1)) / (1 - f)
             //var factorDelta = (1 - factor * friction) / (1 - friction); // geometric series
-            var factorDelta = (1 - pow(friction, timeDelta+1)) / (1 - friction);
-            var deltaX = speedX * factorDelta;
-            var deltaY = speedY * factorDelta;
+            //var factorDelta = (1 - pow(friction, timeDelta+1)) / (1 - friction);
+            var deltaX = speedX * (1 - pow(frictionX, timeDelta+1)) / (1 - frictionX);
+            var deltaY = speedY * (1 - pow(frictionY, timeDelta+1)) / (1 - frictionY);
+            if (isOutOfBoundsX) { deltaX /= 5; }
+            //if (isOutOfBoundsY) { deltaY /= 5; }
 
             var move = scroller._moveBy(deltaX, deltaY);
+            offsetX = move[0];
+            offsetY = move[1];
 
             if (0 !== speedX && speedX < stopSpeed && speedX > -stopSpeed) { speedX = 0; }
             if (0 !== speedY && speedY < stopSpeed && speedY > -stopSpeed) { speedY = 0; }
@@ -463,6 +480,43 @@ TouchScroll.prototype = {
             //}
 
             if (0 === speedX && 0 === speedY || 0 === move[2] && 0 === move[3]) {
+                // Check for snap back
+                var snapBackDuration = scroller.snapBackDuration;
+
+                if (startSnapBack) console.log(now-startSnapBack, offsetY)
+                if (isOutOfBoundsX) {}
+
+                log = Math.log;
+                if (isOutOfBoundsY) {
+
+
+                    var snapBackDistanceY = offsetY < 0 ? offsetY :
+                        (offsetY > maxY ? offsetY - maxY : 0);
+
+
+                    // m = s * f^t <=> t = log(m/s)/log(f)
+                    var snapBackDuration = log(stopSpeed/speedY) / log(frictionY);
+
+                    //console.log(snapBackDistanceY, frictionY, stopSpeed);
+                    //console.warn( -(log((snapBackDistanceY*(-frictionY)+snapBackDistanceY+frictionY*stopSpeed)/stopSpeed)),log(frictionY) )
+                    //var snapBackDurationY = -(log((snapBackDistanceY*(-frictionY)+snapBackDistanceY+frictionY*stopSpeed)/stopSpeed))/(log(frictionY));
+                    //console.log("snapBackDurationY", snapBackDurationY);
+
+                    //startSnapBack = now;
+                    //console.log("snap back y")
+                    //
+                    //// s = d (-f)+d+f m,   f-1!=0
+                    //speedY = snapBackDistanceY * -frictionY + snapBackDistanceY + frictionX * stopSpeed;
+                    //console.warn(speedY)
+
+
+                    //speedY = -snapBackDistanceY * (friction - 1) / (pow(friction, snapBackDuration+1) - 1);
+                }
+
+                if (0 === speedX && 0 === speedY) {
+                }
+
+
                 clearTimeout(flickInterval);
                 //if (forceStop || !scroller._snapBack()) {
                 //    console.log(now - start, move)
