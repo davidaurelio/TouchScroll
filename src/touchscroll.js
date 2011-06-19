@@ -1,3 +1,72 @@
+var TouchScroll = {
+    accel: .998,
+    speedMin: .1,
+
+    now: Date.now || function() { return +new Date(); },
+    queueAnimation: window.requestAnimationFrame ||
+              window.webkitRequestAnimationFrame ||
+              window.mozRequestAnimationFrame ||
+              window.oRequestAnimationFrame ||
+              window.msRequestAnimationFrame ||
+              function(callback){ window.setTimeout(callback, 1000 / 60); },
+
+    handleEvent: function(e) {
+
+    },
+
+    flick: function(speed, initPosition, boundary) {
+        var accel = this.accel, speedMin = this.speedMin, now = this.now, queueAnimation = this.queueAnimation;
+        var startTime = now();
+        var calcFactor = speed < 0 ? -1 : 1;
+
+        var pow = Math.pow, log = Math.log;
+        var logAccel = log(accel);
+
+        var totalDuration = log(speedMin / speed) / logAccel;
+        var endTime = startTime + totalDuration;
+        var totalDistance = speed * (1 - pow(accel, totalDuration + 1)) / (1 - accel);
+
+        var boundaryDistance = boundary - initPosition * calcFactor;
+        var bounceStartAfter =
+            (logAccel - log((accel-boundaryDistance)/speed - boundaryDistance/speed + 1)) /
+            logAccel;
+        var bounceStartTime = startTime + bounceStartAfter;
+
+        function animate(time) {
+            time || (time = now());
+            var aligned = false;
+
+            if (time < bounceStartTime) {
+                // flick
+            }
+            else {
+                // bounce
+            }
+
+            if (time < endTime) {
+                queueAnimation(animate);
+            }
+        }
+
+        function flick(time) {
+            var timeDelta = (time || now()) - startTime;
+            return initPosition + speed * (1 - pow(accel, timeDelta + 1)) / (1 - accel);
+        }
+
+        function bounce(time) {
+            if (!aligned) {
+                //TODO: align to boundary
+                aligned = true;
+            }
+            var timeDelta = (time || now()) - bounceStartTime, a = accel * accel;
+            return speed * (1 - pow(a, timeDelta + 1)) / (1 - a);
+        }
+
+
+
+    }
+};
+
 function TouchScroll(domNode, options) {
     options = options || {};
 
